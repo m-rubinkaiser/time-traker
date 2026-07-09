@@ -9,8 +9,10 @@ const app = express();
 // Connect to MongoDB
 connectDB();
 
-// Initialize Daily Cron Scheduler
-initScheduler();
+// Initialize Daily Cron Scheduler locally (Vercel will use cron endpoint instead)
+if (process.env.NODE_ENV !== 'production') {
+  initScheduler();
+}
 
 // Middleware
 app.use(cors({
