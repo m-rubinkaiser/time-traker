@@ -1,0 +1,402 @@
+import { useEffect, useState } from 'react';
+import { MdAdd, MdEdit, MdSearch, MdTimer, MdCheckCircle, MdPlayArrow, MdStop, MdChevronLeft, MdChevronRight } from 'react-icons/md';
+import API from '../services/api';
+import { formatDuration, formatDate, isOverdue, isDueToday, todayIso } from '../utils/formatters';
+import toast from 'react-hot-toast';
+import useTimerStore from '../store/timerStore';
+import ManualEntryModal from '../components/ManualEntryModal';
+
+const PRIORITY_OPTIONS = ['low', 'medium', 'high', 'urgent'];
+const STATUS_CONFIG = [
+  { id: 'pending', label: 'Pending', color: '#7adcf6' },
+  { id: 'in-progress', label: 'In Progress', color: '#00c55a' },
+  { id: 'completed', label: 'Completed', color: '#13d266' },
+  { id: 'cancelled', label: 'Cancelled', color: '#e08f9a' }
+];
+const STATUS_OPTIONS = STATUS_CONFIG.map(s => s.id);
+
+function TaskModal({ task, projects, dateFilter, vociferEmployees = [], onClose, onSave }) {
+  const [form, setForm] = useState({
+    projectId: task?.projectId?._id || task?.projectId || (projects[0]?._id || ''),
+    title: task?.title || '',
+    description: task?.description || '',
+    priority: task?.priority || 'medium',
+    status: task?.status || 'pending',
+    developerId: '',
+    testerId: ''
+  });
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.title.trim()) return toast.error('Task title is required');
+    if (!form.projectId) return toast.error('Please select a project');
+    setSaving(true);
+    try {
+      const payload = { ...form };
+      
+      if (form.developerId) {
+        const dev = vociferEmployees.find(e => (e.empid || e.id) == form.developerId);
+        if (dev) payload.developer = { id: dev.empid || dev.id, name: dev.name || dev.firstName || `User ${dev.empid || dev.id}` };
+      }
+      if (form.testerId) {
+        const tst = vociferEmployees.find(e => (e.empid || e.id) == form.testerId);
+        if (tst) payload.tester = { id: tst.empid || tst.id, name: tst.name || tst.firstName || `User ${tst.empid || tst.id}` };
+      }
+
+      if (!task && dateFilter) {
+        payload.createdAt = new Date(dateFilter).toISOString();
+      }
+      const { data } = task
+        ? await API.put(`/tasks/${task._id}`, payload)
+        : await API.post('/tasks', payload);
+      toast.success(task ? 'Task updated' : 'Task created!');
+      onSave(data, !!task);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to save task');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal animate-in" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <div className="modal-title">{task ? 'Edit Task' : 'Add New Task'}</div>
+          <button className="btn btn-ghost btn-icon btn-sm" onClick={onClose}>✕</button>
+        </div>
+        <form onSubmit={handleSubmit}>
+          <div className="modal-body">
+            <div className="form-group">
+              <label className="form-label">Project *</label>
+              <select className="form-control" value={form.projectId}
+                onChange={e => setForm(p => ({ ...p, projectId: e.target.value }))}>
+                <option value="">Select project...</option>
+                {projects.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Task Title *</label>
+              <input className="form-control" placeholder="What needs to be done?" value={form.title}
+                onChange={e => setForm(p => ({ ...p, title: e.target.value }))} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Description</label>
+              <textarea className="form-control" rows={2} placeholder="Additional details..." value={form.description}
+                onChange={e => setForm(p => ({ ...p, description: e.target.value }))} />
+            </div>
+            <div className="form-row">
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Priority</label>
+                <select className="form-control" value={form.priority}
+                  onChange={e => setForm(p => ({ ...p, priority: e.target.value }))}>
+                  {PRIORITY_OPTIONS.map(o => <option key={o} value={o}>{o.charAt(0).toUpperCase() + o.slice(1)}</option>)}
+                </select>
+              </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label className="form-label">Status</label>
+                <select className="form-control" value={form.status}
+                  onChange={e => setForm(p => ({ ...p, status: e.target.value }))}>
+                  {STATUS_OPTIONS.map(o => <option key={o} value={o}>{o.replace('-', ' ').replace(/^\w/, c => c.toUpperCase())}</option>)}
+                </select>
+              </div>
+            </div>
+            {vociferEmployees && vociferEmployees.length > 0 && (
+              <div className="form-row" style={{ marginTop: 12 }}>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Vocifer Developer</label>
+                  <select className="form-control" value={form.developerId}
+                    onChange={e => setForm(p => ({ ...p, developerId: e.target.value }))}>
+                    <option value="">Default (Me)</option>
+                    {vociferEmployees.map(e => <option key={e.empid || e.id} value={e.empid || e.id}>{e.name || e.firstName || e.email || `User ${e.empid || e.id}`}</option>)}
+                  </select>
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label className="form-label">Vocifer Tester</label>
+                  <select className="form-control" value={form.testerId}
+                    onChange={e => setForm(p => ({ ...p, testerId: e.target.value }))}>
+                    <option value="">Default (Me)</option>
+                    {vociferEmployees.map(e => <option key={e.empid || e.id} value={e.empid || e.id}>{e.name || e.firstName || e.email || `User ${e.empid || e.id}`}</option>)}
+                  </select>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="modal-footer">
+            <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
+            <button type="submit" className="btn btn-primary" disabled={saving}>
+              {saving ? <span className="spinner" /> : null}
+              {task ? 'Update' : 'Add Task'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+export default function Tasks() {
+  const timer = useTimerStore();
+  const [tasks, setTasks] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [vociferEmployees, setVociferEmployees] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [projectFilter, setProjectFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState('');
+  const [dateFilter, setDateFilter] = useState(todayIso());
+  const [modal, setModal] = useState(null);
+  const [selected, setSelected] = useState(null);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const params = {};
+      if (search) params.search = search;
+      if (projectFilter) params.projectId = projectFilter;
+      if (statusFilter) params.status = statusFilter;
+      if (priorityFilter) params.priority = priorityFilter;
+      if (dateFilter) params.date = dateFilter;
+
+      const [tasksRes, projRes] = await Promise.all([
+        API.get('/tasks', { params }),
+        API.get('/projects', { params: { status: 'active' } })
+      ]);
+      setTasks(tasksRes.data);
+      setProjects(projRes.data);
+    } catch {
+      toast.error('Failed to load tasks');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchData(); }, [search, projectFilter, statusFilter, priorityFilter, dateFilter]);
+
+  useEffect(() => {
+    API.get('/tasks/vocifer/employees')
+      .then(res => setVociferEmployees(res.data || []))
+      .catch(() => setVociferEmployees([]));
+  }, []);
+
+  const changeDate = (days) => {
+    if (!dateFilter) {
+      setDateFilter(todayIso());
+      return;
+    }
+    const d = new Date(dateFilter);
+    d.setDate(d.getDate() + days);
+    setDateFilter(d.toISOString().split('T')[0]);
+  };
+
+  const handleSave = (task, isEdit) => {
+    if (isEdit) setTasks(p => p.map(t => t._id === task._id ? task : t));
+    else setTasks(p => [task, ...p]);
+    setModal(null);
+  };
+
+  const handleComplete = async (task) => {
+    const newStatus = task.status === 'completed' ? 'pending' : 'completed';
+    try {
+      const payload = { status: newStatus };
+      if (newStatus === 'completed' && dateFilter) {
+        payload.completedAt = new Date(dateFilter).toISOString();
+      }
+      const { data } = await API.put(`/tasks/${task._id}`, payload);
+      setTasks(p => p.map(t => t._id === task._id ? data : t));
+    } catch {
+      toast.error('Failed to update task');
+    }
+  };
+
+  const handleStopTimer = async () => {
+    const { totalSeconds, startedAt, taskId } = timer.stop();
+    if (totalSeconds < 60) {
+      toast.error('Timer must run for at least 1 minute');
+      return;
+    }
+    const minutes = Math.round(totalSeconds / 60);
+    const startTime = new Date(startedAt).toTimeString().slice(0, 5);
+    const endTime = new Date().toTimeString().slice(0, 5);
+
+    try {
+      const task = tasks.find(t => t._id === taskId);
+      await API.post('/time-entries', {
+        taskId: task?._id,
+        projectId: task?.projectId?._id || task?.projectId,
+        date: new Date().toISOString().split('T')[0],
+        startTime,
+        endTime,
+        durationMinutes: minutes,
+        entryType: 'auto',
+        remarks: `Auto-tracked via timer`
+      });
+      fetchData();
+      toast.success(`✅ ${formatDuration(minutes)} logged for ${task?.title}`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to save time entry');
+    }
+  };  const getStatusCount = (s) => tasks.filter(t => t.status === s).length;
+
+  return (
+    <div className="animate-in">
+      <div className="page-header" style={{ marginBottom: 12 }}>
+        <div>
+          <div className="page-title">Tasks</div>
+        </div>
+        <button className="btn btn-primary" onClick={() => { setSelected(null); setModal('task'); }}>
+          <MdAdd /> Add Task
+        </button>
+      </div>
+
+      {/* Top Menu for Statuses */}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
+        {STATUS_CONFIG.map(s => {
+          const count = getStatusCount(s.id);
+          const isActive = statusFilter === s.id;
+          return (
+            <button key={s.id} onClick={() => setStatusFilter(isActive ? '' : s.id)}
+              style={{
+                flex: 1, minWidth: 100, height: 40, borderRadius: 6, border: 'none', cursor: 'pointer',
+                background: s.color, color: 'white', fontWeight: 600, fontSize: 13,
+                boxShadow: isActive ? 'inset 0 0 0 3px rgba(0,0,0,0.3)' : '0 2px 4px rgba(0,0,0,0.1)',
+                opacity: (statusFilter && !isActive) ? 0.6 : 1, transition: 'all 0.2s',
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}>
+              {s.label} ({count})
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Filters */}
+      <div className="filters-bar" style={{ flexWrap: 'wrap' }}>
+        <div className="search-input-wrap">
+          <MdSearch style={{ color: 'var(--text-muted)' }} />
+          <input placeholder="Search tasks..." value={search} onChange={e => setSearch(e.target.value)} />
+        </div>
+
+        <div className="filter-group">
+          <span className="filter-label">Project:</span>
+          <select className="filter-select" value={projectFilter} onChange={e => setProjectFilter(e.target.value)}>
+            <option value="">All</option>
+            {projects.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
+          </select>
+        </div>
+
+        <div className="filter-group">
+          <span className="filter-label">Priority:</span>
+          <select className="filter-select" value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)}>
+            <option value="">All</option>
+            {PRIORITY_OPTIONS.map(p => <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
+          </select>
+        </div>
+
+        <div className="filter-group">
+          <span className="filter-label">Date:</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'var(--bg-elevated)', padding: '2px 4px', borderRadius: 6, border: '1px solid var(--border)' }}>
+            <button className="btn btn-ghost btn-icon btn-sm" style={{ padding: 4 }} onClick={() => changeDate(-1)}>
+              <MdChevronLeft size={20} />
+            </button>
+            <input className="filter-select" type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)} style={{ border: 'none', background: 'transparent', margin: 0, padding: '4px 8px' }} />
+            <button className="btn btn-ghost btn-icon btn-sm" style={{ padding: 4 }} onClick={() => changeDate(1)}>
+              <MdChevronRight size={20} />
+            </button>
+            {dateFilter && (
+              <button className="btn btn-ghost btn-sm" style={{ padding: '0 8px', marginLeft: 4 }} onClick={() => setDateFilter('')} title="Show all time">
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Task List */}
+      {loading ? (
+        <div className="loading-overlay"><span className="spinner spinner-lg" /></div>
+      ) : tasks.length === 0 ? (
+        <div className="empty-state">
+          <div className="empty-icon">📋</div>
+          <div className="empty-title">No tasks found</div>
+          <div className="empty-desc">Create your first task to get started</div>
+          <button className="btn btn-primary" onClick={() => { setSelected(null); setModal('task'); }}>
+            <MdAdd /> Add Task
+          </button>
+        </div>
+      ) : (
+        <div className="task-list">
+          {tasks.map(task => {
+            const isCompleted = task.status === 'completed';
+            const statusColor = STATUS_CONFIG.find(c => c.id === task.status)?.color || 'var(--text-muted)';
+            
+            return (
+              <div key={task._id} className={`task-item ${isCompleted ? 'completed' : ''}`}>
+                <div
+                  className={`task-checkbox ${isCompleted ? 'checked' : ''}`}
+                  onClick={() => handleComplete(task)}
+                  title={isCompleted ? 'Mark ToDo' : 'Mark Complete'}
+                  style={{ borderColor: isCompleted ? statusColor : 'var(--border)' }}
+                >
+                  {isCompleted ? <span style={{ color: statusColor }}>✓</span> : ''}
+                </div>
+
+                <div className="task-content">
+                  <div className="task-title">{task.title}</div>
+                  <div className="task-meta">
+                    <span className="task-project">
+                      <span className="task-dot" style={{ background: task.projectId?.color }} />
+                      {task.projectId?.name}
+                    </span>
+                    <span className={`badge badge-${task.priority}`}>{task.priority}</span>
+                    <span className="badge" style={{ background: statusColor, color: 'white', borderColor: statusColor }}>
+                      {STATUS_CONFIG.find(c => c.id === task.status)?.label || task.status}
+                    </span>
+                    {task.totalMinutes > 0 && (
+                      <span className="task-time-logged"><MdTimer size={12} /> {formatDuration(task.totalMinutes)}</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="task-actions">
+                  {timer.activeTaskId === task._id && timer.status === 'running' ? (
+                    <button className="btn btn-danger btn-icon btn-sm" title="Stop Timer"
+                      onClick={() => handleStopTimer()}>
+                      <MdStop size={15} />
+                    </button>
+                  ) : (
+                    <button className="btn btn-ghost btn-icon btn-sm" title="Start Timer"
+                      onClick={() => timer.start(task)}>
+                      <MdPlayArrow size={15} />
+                    </button>
+                  )}
+                  <button className="btn btn-ghost btn-icon btn-sm" title="Log Time Manually"
+                    onClick={() => { setSelected(task); setModal('manual'); }}>
+                    <MdTimer size={15} />
+                  </button>
+                  <button className="btn btn-ghost btn-icon btn-sm" title="Edit task"
+                    onClick={() => { setSelected(task); setModal('task'); }}>
+                    <MdEdit size={15} />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {modal === 'task' && (
+        <TaskModal task={selected} projects={projects} dateFilter={dateFilter} vociferEmployees={vociferEmployees} onClose={() => setModal(null)} onSave={handleSave} />
+      )}
+      {modal === 'manual' && selected && (
+        <ManualEntryModal
+          tasks={tasks}
+          defaultTaskId={selected._id}
+          onClose={() => setModal(null)}
+          onSave={() => { setModal(null); fetchData(); }}
+        />
+      )}
+    </div>
+  );
+}

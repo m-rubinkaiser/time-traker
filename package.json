@@ -1,0 +1,14 @@
+{
+  "name": "timetrack-app",
+  "version": "1.0.0",
+  "description": "MERN Stack Project Time Tracker & Todo System",
+  "scripts": {
+    "dev": "concurrently \"npm run server\" \"npm run client\" --names \"SERVER,CLIENT\" --prefix-colors \"cyan,magenta\"",
+    "server": "cd server && node server.js",
+    "client": "cd client && npm run dev",
+    "install:all": "cd server && npm install && cd ../client && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
