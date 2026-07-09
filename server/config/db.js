@@ -14,7 +14,7 @@ const connectDB = async () => {
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
     console.error(`❌ MongoDB Error: ${error.message}`);
-    process.exit(1);
+    // Removed process.exit(1) because it causes FUNCTION_INVOCATION_FAILED on Vercel
   }
 };
 
