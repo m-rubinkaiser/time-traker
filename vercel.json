@@ -19,8 +19,7 @@
       "dest": "/server/server.js"
     },
     {
-      "src": "/(.+\\.(js|css|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot|map|json|webp))",
-      "dest": "/$1"
+      "handle": "filesystem"
     },
     {
       "src": "/(.*)",
