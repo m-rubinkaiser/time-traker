@@ -1,22 +1,34 @@
 const mongoose = require('mongoose');
-const dns = require('dns');
 
-// Configure custom DNS servers to bypass potential local DNS resolution failures (e.g., querySrv ECONNREFUSED on Windows/IPv6)
-try {
-  dns.setServers(['8.8.8.8', '1.1.1.1']);
-} catch (err) {
-  console.warn('⚠️ MongoDB DNS: Failed to set custom DNS servers, using system defaults:', err.message);
+let cached = global.mongoose;
+
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
 }
 
 const connectDB = async () => {
-  try {
-    const conn = await mongoose.connect(process.env.MONGO_URI);
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
-  } catch (error) {
-    console.error(`❌ MongoDB Error: ${error.message}`);
-    // Removed process.exit(1) because it causes FUNCTION_INVOCATION_FAILED on Vercel
+  if (cached.conn) {
+    console.log('✅ MongoDB using cached connection');
+    return cached.conn;
   }
+
+  if (!cached.promise) {
+    console.log('⏳ Connecting to MongoDB...');
+    cached.promise = mongoose.connect(process.env.MONGO_URI).then((mongoose) => {
+      console.log(`✅ MongoDB Connected: ${mongoose.connection.host}`);
+      return mongoose;
+    });
+  }
+  
+  try {
+    cached.conn = await cached.promise;
+  } catch (e) {
+    cached.promise = null;
+    console.error(`❌ MongoDB Error: ${e.message}`);
+    throw e;
+  }
+
+  return cached.conn;
 };
 
 module.exports = connectDB;
-
