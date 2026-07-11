@@ -43,6 +43,22 @@ const useAdminStore = create((set, get) => ({
     }
   },
 
+  deleteUser: async (id) => {
+    set({ loading: true, error: null });
+    try {
+      await API.delete(`/admin/users/${id}`);
+      set((state) => ({
+        users: state.users.filter((u) => u._id !== id),
+        loading: false
+      }));
+      return { success: true };
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Failed to delete user';
+      set({ error: msg, loading: false });
+      return { success: false, message: msg };
+    }
+  },
+
   toggleSuspension: async (id) => {
     set({ loading: true, error: null });
     try {
@@ -98,10 +114,10 @@ const useAdminStore = create((set, get) => ({
     }
   },
 
-  fetchProjects: async () => {
+  fetchProjects: async (search = '') => {
     set({ loading: true, error: null });
     try {
-      const { data } = await API.get('/admin/projects');
+      const { data } = await API.get(`/admin/projects?search=${search}`);
       set({ projects: data, loading: false });
     } catch (err) {
       set({ error: err.response?.data?.message || 'Failed to fetch projects', loading: false });

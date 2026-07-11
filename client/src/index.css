@@ -500,6 +500,42 @@ img { max-width: 100%; }
   outline: none;
 }
 
+.w-full {
+  width: 100% !important;
+}
+
+.auth-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  width: 100%;
+  transition: var(--transition);
+}
+
+.auth-input-wrapper:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-light);
+}
+
+.auth-input-wrapper input {
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 14px;
+  flex: 1;
+  outline: none;
+  width: 100%;
+  min-width: 0;
+}
+
+.auth-input-wrapper input::placeholder {
+  color: var(--text-muted);
+}
+
 .form-control:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-light);

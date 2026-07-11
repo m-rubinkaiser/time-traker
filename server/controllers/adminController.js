@@ -193,7 +193,7 @@ const deleteUser = async (req, res) => {
   try {
     const userId = req.params.id;
     await User.findByIdAndDelete(userId);
-    await Project.deleteMany({ userId });
+    await Project.deleteMany({ createdBy: userId });
     await Task.deleteMany({ userId });
     await TimeEntry.deleteMany({ userId });
     await Settings.deleteMany({ userId });
@@ -231,7 +231,29 @@ const resetPassword = async (req, res) => {
 // @route   GET /api/admin/projects
 const getAllProjects = async (req, res) => {
   try {
-    const projects = await Project.find({}).populate('userId', 'name email').sort({ createdAt: -1 });
+    const search = req.query.search || '';
+    let query = {};
+
+    if (search) {
+      // Import User model if not already imported (it should be imported at the top)
+      const User = require('../models/User');
+      const users = await User.find({
+        $or: [
+          { name: { $regex: search, $options: 'i' } },
+          { email: { $regex: search, $options: 'i' } }
+        ]
+      }).select('_id');
+      const userIds = users.map(u => u._id);
+
+      query = {
+        $or: [
+          { name: { $regex: search, $options: 'i' } },
+          { createdBy: { $in: userIds } }
+        ]
+      };
+    }
+
+    const projects = await Project.find(query).populate('createdBy', 'name email').sort({ createdAt: -1 });
     
     const enriched = await Promise.all(
       projects.map(async (p) => {

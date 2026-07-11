@@ -24,12 +24,8 @@ export default function AdminUsers() {
   const [extendDays, setExtendDays] = useState('30');
 
   useEffect(() => {
-    fetchUsers(search);
-  }, [fetchUsers, search]);
-
-  const handleSearch = (e) => {
-    setSearch(e.target.value);
-  };
+    fetchUsers('');
+  }, [fetchUsers]);
 
   const handleEditClick = (u) => {
     setSelectedUser(u);
@@ -63,12 +59,12 @@ export default function AdminUsers() {
   const handleDeleteClick = async (u) => {
     if (u.role === 'admin') return toast.error('Cannot delete an admin');
     if (window.confirm(`Are you absolutely sure you want to delete ${u.name}? This will purge all their projects, tasks, and time logs permanently.`)) {
-      try {
-        await deleteUser(u._id);
+      const res = await deleteUser(u._id);
+      if (res.success) {
         toast.success('User deleted successfully');
         fetchUsers(search);
-      } catch (err) {
-        toast.error('Failed to delete user');
+      } else {
+        toast.error(res.message || 'Failed to delete user');
       }
     }
   };
@@ -144,15 +140,20 @@ export default function AdminUsers() {
       </div>
 
       {/* Filter Toolbar */}
-      <div className="topbar-search" style={{ maxWidth: 400, marginBottom: 24, padding: '8px 12px', borderRadius: 'var(--radius-md)' }}>
-        <MdSearch size={20} style={{ color: 'var(--text-muted)' }} />
-        <input
-          type="text"
-          placeholder="Search by name or email..."
-          value={search}
-          onChange={handleSearch}
-        />
-      </div>
+      <form onSubmit={(e) => { e.preventDefault(); fetchUsers(search); }} style={{ display: 'flex', gap: 10, maxWidth: 500, marginBottom: 24 }}>
+        <div className="topbar-search" style={{ flex: 1, padding: '8px 12px', borderRadius: 'var(--radius-md)' }}>
+          <MdSearch size={20} style={{ color: 'var(--text-muted)', marginRight: 6 }} />
+          <input
+            type="text"
+            placeholder="Search by name or email..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <button type="submit" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          Search
+        </button>
+      </form>
 
       {/* Users Table */}
       <div className="card" style={{ overflowX: 'auto', padding: 0 }}>

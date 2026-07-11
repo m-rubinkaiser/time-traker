@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import useAdminStore from '../store/adminStore';
 import toast from 'react-hot-toast';
-import { MdDelete, MdFolder, MdPerson, MdCheckCircle, MdPending, MdTimer } from 'react-icons/md';
+import { MdDelete, MdFolder, MdPerson, MdCheckCircle, MdPending, MdTimer, MdSearch } from 'react-icons/md';
 
 export default function AdminProjects() {
   const { projects, fetchProjects, deleteProject, loading } = useAdminStore();
@@ -22,16 +22,10 @@ export default function AdminProjects() {
     }
   };
 
-  const filteredProjects = projects.filter(p => {
-    const projName = p.name ? p.name.toLowerCase() : '';
-    const creatorName = p.userId?.name ? p.userId.name.toLowerCase() : 'unknown';
-    const creatorEmail = p.userId?.email ? p.userId.email.toLowerCase() : 'n/a';
-    const searchFilter = filter.toLowerCase();
-
-    return projName.includes(searchFilter) || 
-           creatorName.includes(searchFilter) || 
-           creatorEmail.includes(searchFilter);
-  });
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    fetchProjects(filter);
+  };
 
   return (
     <div className="animate-in">
@@ -42,27 +36,33 @@ export default function AdminProjects() {
         </div>
       </div>
 
-      {/* Filter bar */}
-      <div className="topbar-search" style={{ maxWidth: 400, marginBottom: 24, padding: '8px 12px', borderRadius: 'var(--radius-md)' }}>
-        <input
-          type="text"
-          placeholder="Filter by project name, creator, or email..."
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        />
-      </div>
+      {/* Filter / Search bar */}
+      <form onSubmit={handleSearchSubmit} style={{ display: 'flex', gap: 10, maxWidth: 500, marginBottom: 24 }}>
+        <div className="topbar-search" style={{ flex: 1, padding: '8px 12px', borderRadius: 'var(--radius-md)' }}>
+          <MdSearch style={{ color: 'var(--text-muted)', fontSize: 18, flexShrink: 0, marginRight: 6 }} />
+          <input
+            type="text"
+            placeholder="Search by project name, creator, or email..."
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+          />
+        </div>
+        <button type="submit" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          Search
+        </button>
+      </form>
 
       {/* Projects Grid */}
-      {loading && projects.length === 0 ? (
+      {loading ? (
         <div style={{ textAlign: 'center', padding: 48 }}>
           <span className="spinner spinner-lg" />
-          <p style={{ marginTop: 12, color: 'var(--text-muted)' }}>Loading projects...</p>
+          <p style={{ marginTop: 12, color: 'var(--text-muted)' }}>Searching projects...</p>
         </div>
-      ) : filteredProjects.length === 0 ? (
+      ) : projects.length === 0 ? (
         <div className="empty-state" style={{ padding: 48 }}>No projects found matching your query.</div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 20 }}>
-          {filteredProjects.map((p) => {
+          {projects.map((p) => {
             const projectColor = p.color || '#a855f7';
             return (
               <div key={p._id} className="card project-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderLeft: `4px solid ${projectColor}` }}>
@@ -89,7 +89,7 @@ export default function AdminProjects() {
                   <div style={{ background: 'rgba(255,255,255,0.02)', padding: '10px 14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, color: 'var(--text-muted)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <MdPerson size={14} />
-                      Created by: <strong style={{ color: 'var(--text-primary)' }}>{p.userId?.name || 'Unknown'}</strong> ({p.userId?.email || 'N/A'})
+                      Created by: <strong style={{ color: 'var(--text-primary)' }}>{p.createdBy?.name || 'Unknown'}</strong> ({p.createdBy?.email || 'N/A'})
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <MdTimer size={14} />

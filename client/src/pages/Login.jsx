@@ -39,7 +39,7 @@ export default function Login() {
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label className="form-label">Email</label>
-            <div className="topbar-search" style={{ borderRadius: 'var(--radius-sm)', padding: '10px 14px', width: '100%' }}>
+            <div className="auth-input-wrapper">
               <MdEmail style={{ color: 'var(--text-muted)' }} />
               <input
                 type="email"
@@ -53,7 +53,7 @@ export default function Login() {
 
           <div className="form-group">
             <label className="form-label">Password</label>
-            <div className="topbar-search" style={{ borderRadius: 'var(--radius-sm)', padding: '10px 14px', width: '100%' }}>
+            <div className="auth-input-wrapper">
               <MdLock style={{ color: 'var(--text-muted)' }} />
               <input
                 type={showPass ? 'text' : 'password'}
