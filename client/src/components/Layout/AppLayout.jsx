@@ -17,6 +17,23 @@ export default function AppLayout() {
   return (
     <div className="app-layout">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      {sidebarOpen && (
+        <div 
+          className="sidebar-backdrop" 
+          onClick={() => setSidebarOpen(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.5)',
+            zIndex: 99,
+            backdropFilter: 'blur(3px)',
+            transition: 'opacity 0.2s ease-in'
+          }}
+        />
+      )}
       <div className="main-content">
         <Topbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
         <div className="page-wrapper" onClick={() => setSidebarOpen(false)}>

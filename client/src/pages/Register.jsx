@@ -27,7 +27,7 @@ export default function Register() {
 
   const set = (key) => (e) => setForm(p => ({ ...p, [key]: e.target.value }));
 
-  const inputStyle = { borderRadius: 'var(--radius-sm)', padding: '10px 14px' };
+  const inputStyle = { borderRadius: 'var(--radius-sm)', padding: '10px 14px', width: '100%' };
 
   return (
     <div className="auth-page">

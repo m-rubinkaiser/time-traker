@@ -1238,3 +1238,9 @@ td {
   .form-row { grid-template-columns: 1fr; }
   .form-row-3 { grid-template-columns: 1fr; }
 }
+
+@media (max-width: 480px) {
+  .stats-grid { grid-template-columns: 1fr; }
+  .auth-page { padding: 16px; }
+  .auth-card { padding: 28px 20px; }
+}
