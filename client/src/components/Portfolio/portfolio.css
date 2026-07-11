@@ -1,0 +1,287 @@
+/* Portfolio Stylesheet - Ultra-Premium Glassmorphism & Animations */
+
+.portfolio-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 99999;
+  background: rgba(10, 12, 18, 0.82);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  padding: 0;
+}
+
+.portfolio-modal-container {
+  width: 100%;
+  height: 100%;
+  max-width: 100vw;
+  max-height: 100vh;
+  background: transparent;
+  color: var(--text-primary);
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+  scroll-behavior: smooth;
+}
+
+/* Custom Scroll Progress Bar */
+.portfolio-scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--accent), var(--purple), var(--orange));
+  z-index: 100000;
+  width: 0%;
+  transition: width 0.1s ease-out;
+}
+
+/* Close Button styling */
+.portfolio-close-btn {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 100001;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-radius: var(--radius-full);
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: var(--transition);
+}
+
+.portfolio-close-btn:hover {
+  background: var(--danger);
+  border-color: var(--danger);
+  transform: rotate(90deg) scale(1.1);
+}
+
+/* Cursor Follower */
+.portfolio-cursor-follower {
+  width: 20px;
+  height: 20px;
+  background: rgba(99, 102, 241, 0.3);
+  border: 1px solid rgba(99, 102, 241, 0.6);
+  border-radius: 50%;
+  position: fixed;
+  pointer-events: none;
+  z-index: 100002;
+  transform: translate(-50%, -50%);
+  transition: transform 0.1s ease-out, opacity 0.3s ease-in-out;
+  opacity: 0;
+}
+
+/* Home Section Particle Background */
+.portfolio-particles-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.portfolio-section {
+  padding: 100px 10%;
+  position: relative;
+  z-index: 2;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .portfolio-section {
+    padding: 60px 5%;
+  }
+}
+
+/* Navigation Indicator inside Modal */
+.portfolio-nav {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 17, 23, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-full);
+  padding: 8px 24px;
+  display: flex;
+  gap: 16px;
+  backdrop-filter: blur(12px);
+  z-index: 100000;
+  box-shadow: var(--shadow-lg);
+}
+
+.portfolio-nav-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.portfolio-nav-dot.active {
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent);
+  transform: scale(1.3);
+}
+
+/* Glassmorphism Card base */
+.glass-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-lg);
+  padding: 30px;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.glass-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(99, 102, 241, 0.4);
+  box-shadow: 0 10px 40px rgba(99, 102, 241, 0.15);
+  transform: translateY(-5px);
+}
+
+/* Timelines styling */
+.timeline-wrapper {
+  position: relative;
+  padding-left: 30px;
+  margin-top: 30px;
+}
+
+.timeline-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 8px;
+  width: 2px;
+  background: linear-gradient(to bottom, var(--accent), var(--purple), transparent);
+}
+
+.timeline-item {
+  position: relative;
+  margin-bottom: 40px;
+}
+
+.timeline-bullet {
+  position: absolute;
+  left: -29px;
+  top: 6px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 4px solid var(--bg-base);
+  box-shadow: 0 0 8px var(--accent);
+}
+
+/* Project Card Flip effect */
+.project-flip-card {
+  background-color: transparent;
+  perspective: 1000px;
+  height: 380px;
+  cursor: pointer;
+}
+
+.project-flip-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+  transition: transform 0.8s;
+  transform-style: preserve-3d;
+}
+
+.project-flip-card:hover .project-flip-inner {
+  transform: rotateY(180deg);
+}
+
+.project-flip-front, .project-flip-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.project-flip-front {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.project-flip-back {
+  background: rgba(15, 17, 23, 0.95);
+  transform: rotateY(180deg);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+}
+
+/* Spotlight overlay */
+.spotlight-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.spotlight-glow {
+  position: absolute;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, transparent 70%);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+}
+
+/* Back to Top Floating Button */
+.back-to-top-btn {
+  position: fixed;
+  bottom: 90px;
+  right: 25px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-accent);
+  z-index: 100000;
+  transition: var(--transition);
+  opacity: 0;
+  transform: scale(0.8);
+  pointer-events: none;
+}
+
+.back-to-top-btn.visible {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+}
+
+.back-to-top-btn:hover {
+  background: var(--purple);
+  transform: translateY(-4px);
+}

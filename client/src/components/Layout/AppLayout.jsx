@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
+import PortfolioModal from '../Portfolio/PortfolioModal';
 import useSettingsStore from '../../store/settingsStore';
 import useAuthStore from '../../store/authStore';
 
@@ -9,6 +10,7 @@ export default function AppLayout() {
   const { fetchSettings } = useSettingsStore();
   const { token } = useAuthStore();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [portfolioOpen, setPortfolioOpen] = useState(false);
 
   useEffect(() => {
     if (token) fetchSettings();
@@ -35,11 +37,15 @@ export default function AppLayout() {
         />
       )}
       <div className="main-content">
-        <Topbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+        <Topbar 
+          onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} 
+          onTogglePortfolio={() => setPortfolioOpen(!portfolioOpen)}
+        />
         <div className="page-wrapper" onClick={() => setSidebarOpen(false)}>
           <Outlet />
         </div>
       </div>
+      <PortfolioModal isOpen={portfolioOpen} onClose={() => setPortfolioOpen(false)} />
     </div>
   );
 }

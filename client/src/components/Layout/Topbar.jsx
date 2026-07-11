@@ -1,5 +1,5 @@
 import { useLocation } from 'react-router-dom';
-import { MdSearch, MdLightMode, MdDarkMode, MdNotifications, MdMenu } from 'react-icons/md';
+import { MdSearch, MdLightMode, MdDarkMode, MdNotifications, MdMenu, MdWorkspacePremium } from 'react-icons/md';
 import { useState } from 'react';
 import useSettingsStore from '../../store/settingsStore';
 
@@ -12,7 +12,7 @@ const PAGE_TITLES = {
   '/settings': { title: 'Settings', sub: 'Customize your preferences' },
 };
 
-export default function Topbar({ onToggleSidebar }) {
+export default function Topbar({ onToggleSidebar, onTogglePortfolio }) {
   const { pathname } = useLocation();
   const { theme, setTheme } = useSettingsStore();
   const [search, setSearch] = useState('');
@@ -29,6 +29,13 @@ export default function Topbar({ onToggleSidebar }) {
             display: inline-flex !important;
             margin-right: 12px;
           }
+        }
+        @keyframes pulse-glow {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.2); opacity: 0.8; }
+        }
+        .portfolio-bell-pulse {
+          animation: pulse-glow 2s infinite ease-in-out;
         }
       `}</style>
       <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -56,6 +63,29 @@ export default function Topbar({ onToggleSidebar }) {
             onChange={e => setSearch(e.target.value)}
           />
         </div>
+
+        {/* New Portfolio Trigger Bell */}
+        <button
+          className="btn btn-ghost btn-icon"
+          onClick={onTogglePortfolio}
+          title="Open Rubin's Developer Portfolio"
+          style={{ position: 'relative', color: 'var(--accent)', marginRight: 4 }}
+        >
+          <MdWorkspacePremium size={22} />
+          <span 
+            className="portfolio-bell-pulse"
+            style={{
+              position: 'absolute',
+              top: 2,
+              right: 2,
+              width: 8,
+              height: 8,
+              background: 'var(--orange)',
+              borderRadius: '50%',
+              boxShadow: '0 0 8px var(--orange)'
+            }} 
+          />
+        </button>
 
         <button
           className="btn btn-ghost btn-icon"
