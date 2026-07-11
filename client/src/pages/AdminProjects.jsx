@@ -22,11 +22,16 @@ export default function AdminProjects() {
     }
   };
 
-  const filteredProjects = projects.filter(p => 
-    p.name.toLowerCase().includes(filter.toLowerCase()) ||
-    p.userId?.name.toLowerCase().includes(filter.toLowerCase()) ||
-    p.userId?.email.toLowerCase().includes(filter.toLowerCase())
-  );
+  const filteredProjects = projects.filter(p => {
+    const projName = p.name ? p.name.toLowerCase() : '';
+    const creatorName = p.userId?.name ? p.userId.name.toLowerCase() : 'unknown';
+    const creatorEmail = p.userId?.email ? p.userId.email.toLowerCase() : 'n/a';
+    const searchFilter = filter.toLowerCase();
+
+    return projName.includes(searchFilter) || 
+           creatorName.includes(searchFilter) || 
+           creatorEmail.includes(searchFilter);
+  });
 
   return (
     <div className="animate-in">
