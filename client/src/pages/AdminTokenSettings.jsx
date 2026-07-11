@@ -9,6 +9,8 @@ export default function AdminTokenSettings() {
   const [trialDays, setTrialDays] = useState(14);
   const [subAmount, setSubAmount] = useState(50);
   const [activationToken, setActivationToken] = useState('RUBIN-ACTIVATE');
+  const [notificationTimes, setNotificationTimes] = useState(['06:00']);
+  const [newTime, setNewTime] = useState('09:00');
   
   const [showKeyConfirm, setShowKeyConfirm] = useState(false);
   const [showLogoutAllConfirm, setShowLogoutAllConfirm] = useState(false);
@@ -23,6 +25,7 @@ export default function AdminTokenSettings() {
       setTrialDays(tokenConfig.subscriptionTrialDays);
       setSubAmount(tokenConfig.subscriptionAmount);
       setActivationToken(tokenConfig.activationToken || 'RUBIN-ACTIVATE');
+      setNotificationTimes(tokenConfig.notificationTimes || ['06:00']);
     }
   }, [tokenConfig]);
 
@@ -32,7 +35,8 @@ export default function AdminTokenSettings() {
       tokenExpiry,
       subscriptionTrialDays: parseInt(trialDays, 10),
       subscriptionAmount: parseFloat(subAmount),
-      activationToken
+      activationToken,
+      notificationTimes
     });
     if (res.success) {
       toast.success('System settings updated successfully.');
@@ -141,6 +145,84 @@ export default function AdminTokenSettings() {
                   placeholder="e.g. RUBIN-ACTIVATE"
                   style={{ letterSpacing: 1 }}
                 />
+              </div>
+
+              <div className="form-group" style={{ gridColumn: 'span 2', marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+                <label className="form-label" style={{ fontWeight: 600, display: 'block', marginBottom: 4 }}>
+                  Daily Task Reminder Alert Times
+                </label>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)', display: 'block', marginBottom: 12 }}>
+                  Configure one or more times during the day when the server will run the daily email notification scan.
+                </span>
+                
+                {/* Time badges */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                  {notificationTimes.length === 0 ? (
+                    <span style={{ fontSize: 13, color: 'var(--orange)', fontStyle: 'italic' }}>No alerts scheduled. Choose a time below to add.</span>
+                  ) : (
+                    notificationTimes.map((time, idx) => (
+                      <div 
+                        key={idx} 
+                        style={{ 
+                          display: 'inline-flex', 
+                          alignItems: 'center', 
+                          gap: 8, 
+                          padding: '6px 12px', 
+                          borderRadius: '6px', 
+                          background: 'var(--bg-elevated)', 
+                          border: '1px solid var(--border)',
+                          fontSize: 13,
+                          fontWeight: 500,
+                          color: 'var(--text)'
+                        }}
+                      >
+                        <span>⏱️ {time}</span>
+                        <button
+                          type="button"
+                          onClick={() => setNotificationTimes(notificationTimes.filter((_, i) => i !== idx))}
+                          style={{ 
+                            background: 'none', 
+                            border: 'none', 
+                            color: 'var(--danger)', 
+                            cursor: 'pointer', 
+                            fontSize: 16,
+                            fontWeight: 'bold',
+                            padding: '0 2px',
+                            lineHeight: 1
+                          }}
+                        >
+                          &times;
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Add Time selector */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <input
+                    type="time"
+                    className="form-control"
+                    value={newTime}
+                    onChange={(e) => setNewTime(e.target.value)}
+                    style={{ maxWidth: 160 }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      if (!newTime) return;
+                      if (notificationTimes.includes(newTime)) {
+                        toast.error('This alert time is already scheduled.');
+                        return;
+                      }
+                      setNotificationTimes([...notificationTimes, newTime].sort());
+                      toast.success(`Scheduled alert slot at ${newTime}. Save settings to apply.`);
+                    }}
+                  >
+                    Add Alert Time
+                  </button>
+                </div>
               </div>
             </div>
 

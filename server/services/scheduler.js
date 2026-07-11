@@ -36,15 +36,50 @@ const runDailyNotificationJob = async () => {
   }
 };
 
+const { getSystemSettings } = require('../config/systemConfig');
+
+let scheduledJobs = [];
+
 /**
  * Initializes the cron scheduler.
  */
-const initScheduler = () => {
-  // Cron schedule: 0 6 * * * -> 6:00 AM every day
-  cron.schedule('0 6 * * *', () => {
-    runDailyNotificationJob();
+const initScheduler = async () => {
+  // Clear any existing cron jobs
+  scheduledJobs.forEach(job => {
+    if (job && typeof job.stop === 'function') {
+      job.stop();
+    }
   });
-  console.log('⏰ [Scheduler] Daily pending task email job registered for 6:00 AM.');
+  scheduledJobs = [];
+
+  try {
+    const settings = await getSystemSettings();
+    const times = settings.notificationTimes || ['06:00'];
+    console.log(`⏰ [Scheduler] Initializing task email notifications for times: ${times.join(', ')}`);
+
+    times.forEach(time => {
+      const parts = time.split(':');
+      if (parts.length === 2) {
+        const hour = parseInt(parts[0], 10);
+        const minute = parseInt(parts[1], 10);
+        if (!isNaN(hour) && !isNaN(minute) && hour >= 0 && hour < 24 && minute >= 0 && minute < 60) {
+          const cronExp = `${minute} ${hour} * * *`;
+          const job = cron.schedule(cronExp, () => {
+            console.log(`[Scheduler] Dynamic job triggered for scheduled time: ${time}`);
+            runDailyNotificationJob();
+          });
+          scheduledJobs.push(job);
+          console.log(`⏰ [Scheduler] Registered daily notification job for ${time} (${cronExp})`);
+        } else {
+          console.warn(`[Scheduler] Invalid time format ignored: ${time}`);
+        }
+      } else {
+        console.warn(`[Scheduler] Invalid time pattern ignored: ${time}`);
+      }
+    });
+  } catch (err) {
+    console.error('[Scheduler] Failed to load settings or initialize schedules:', err.message);
+  }
 };
 
 module.exports = {

@@ -12,7 +12,8 @@ const getSystemSettings = async () => {
         tokenExpiry: '7d',
         subscriptionTrialDays: 14,
         subscriptionAmount: 50,
-        activationToken: 'RUBIN-ACTIVATE'
+        activationToken: 'RUBIN-ACTIVATE',
+        notificationTimes: ['06:00']
       });
     }
     cachedSettings = settings;
@@ -25,7 +26,8 @@ const getSystemSettings = async () => {
       tokenExpiry: '7d',
       subscriptionTrialDays: 14,
       subscriptionAmount: 50,
-      activationToken: 'RUBIN-ACTIVATE'
+      activationToken: 'RUBIN-ACTIVATE',
+      notificationTimes: ['06:00']
     };
   }
 };

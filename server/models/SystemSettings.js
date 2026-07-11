@@ -21,6 +21,10 @@ const systemSettingsSchema = new mongoose.Schema({
     type: String,
     default: 'RUBIN-ACTIVATE'
   },
+  notificationTimes: {
+    type: [String],
+    default: ['06:00']
+  },
   updatedAt: {
     type: Date,
     default: Date.now

@@ -291,7 +291,8 @@ const getTokenConfig = async (req, res) => {
       tokenExpiry: config.tokenExpiry,
       subscriptionTrialDays: config.subscriptionTrialDays,
       subscriptionAmount: config.subscriptionAmount,
-      activationToken: config.activationToken
+      activationToken: config.activationToken,
+      notificationTimes: config.notificationTimes || ['06:00']
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -302,7 +303,7 @@ const getTokenConfig = async (req, res) => {
 // @route   PUT /api/admin/token-config
 const updateTokenConfig = async (req, res) => {
   try {
-    const { tokenExpiry, subscriptionTrialDays, subscriptionAmount, activationToken } = req.body;
+    const { tokenExpiry, subscriptionTrialDays, subscriptionAmount, activationToken, notificationTimes } = req.body;
     let config = await SystemSettings.findOne({});
     if (!config) {
       config = await SystemSettings.create({});
@@ -312,10 +313,27 @@ const updateTokenConfig = async (req, res) => {
     if (subscriptionTrialDays !== undefined) config.subscriptionTrialDays = subscriptionTrialDays;
     if (subscriptionAmount !== undefined) config.subscriptionAmount = subscriptionAmount;
     if (activationToken !== undefined) config.activationToken = activationToken;
+    if (notificationTimes !== undefined) {
+      if (!Array.isArray(notificationTimes)) {
+        return res.status(400).json({ message: 'Notification times must be an array' });
+      }
+      // Check if they are valid HH:MM strings
+      const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+      for (const time of notificationTimes) {
+        if (!timeRegex.test(time)) {
+          return res.status(400).json({ message: `Invalid time format: ${time}. Must be HH:MM.` });
+        }
+      }
+      config.notificationTimes = notificationTimes;
+    }
     config.updatedAt = Date.now();
 
     await config.save();
     await refreshSystemSettings();
+
+    // Re-initialize scheduler with new configurations
+    const { initScheduler } = require('../services/scheduler');
+    await initScheduler();
 
     res.json({ message: 'System settings updated successfully', config });
   } catch (err) {

@@ -17,6 +17,45 @@ export default function TimeTracking() {
   const [editEntry, setEditEntry] = useState(null);
   const timerStartRef = useRef(null);
 
+  const syncOfflineEntries = async () => {
+    const pending = JSON.parse(localStorage.getItem('unsynced_time_entries') || '[]');
+    if (pending.length === 0) return;
+
+    toast.loading('Syncing offline time entries...', { id: 'offline-sync' });
+    let successCount = 0;
+    const remaining = [];
+    const syncedDataMap = {};
+
+    for (const entry of pending) {
+      try {
+        const payload = {
+          taskId: entry.taskId?._id || entry.taskId,
+          projectId: entry.projectId?._id || entry.projectId,
+          date: entry.date,
+          startTime: entry.startTime,
+          endTime: entry.endTime,
+          durationMinutes: entry.durationMinutes,
+          entryType: entry.entryType,
+          remarks: entry.remarks
+        };
+        const { data } = await API.post('/time-entries', payload);
+        syncedDataMap[entry._id] = data;
+        successCount++;
+      } catch (err) {
+        console.error('Failed to sync offline entry:', err);
+        remaining.push(entry);
+      }
+    }
+
+    localStorage.setItem('unsynced_time_entries', JSON.stringify(remaining));
+    toast.dismiss('offline-sync');
+
+    if (successCount > 0) {
+      toast.success(`Successfully synced ${successCount} offline entries!`);
+      setEntries(prev => prev.map(e => syncedDataMap[e._id] ? syncedDataMap[e._id] : e));
+    }
+  };
+
   useEffect(() => {
     const load = async () => {
       setLoading(true);
@@ -25,10 +64,16 @@ export default function TimeTracking() {
           API.get('/tasks', { params: { status: 'in-progress' } }),
           API.get('/time-entries'),
         ]);
-        // Merge all tasks (including pending for timer selection)
         const allTasks = await API.get('/tasks');
         setTasks(allTasks.data);
-        setEntries(entriesRes.data);
+        
+        // Merge offline pending entries so they display in UI logs
+        const pending = JSON.parse(localStorage.getItem('unsynced_time_entries') || '[]');
+        setEntries([...pending, ...entriesRes.data]);
+
+        if (pending.length > 0 && window.navigator.onLine) {
+          setTimeout(syncOfflineEntries, 500);
+        }
       } catch {
         toast.error('Failed to load data');
       } finally {
@@ -36,7 +81,18 @@ export default function TimeTracking() {
       }
     };
     load();
+
+    window.addEventListener('online', syncOfflineEntries);
+    return () => {
+      window.removeEventListener('online', syncOfflineEntries);
+    };
   }, []);
+
+  useEffect(() => {
+    if (timer.activeTaskId && !activeTask) {
+      setActiveTask(timer.activeTaskId);
+    }
+  }, [timer.activeTaskId, activeTask]);
 
   const handleStart = () => {
     if (!activeTask) return toast.error('Select a task first');
@@ -45,31 +101,19 @@ export default function TimeTracking() {
   };
 
   const handleStop = async () => {
-    const { totalSeconds, startedAt, taskId } = timer.stop();
-    if (totalSeconds < 60) {
-      toast.error('Timer must run for at least 1 minute');
-      return;
-    }
-    const minutes = Math.round(totalSeconds / 60);
-    const startTime = new Date(startedAt).toTimeString().slice(0, 5);
-    const endTime = new Date().toTimeString().slice(0, 5);
-
     try {
-      const task = tasks.find(t => t._id === (taskId || activeTask));
-      const { data } = await API.post('/time-entries', {
-        taskId: task?._id || activeTask,
-        projectId: task?.projectId?._id || task?.projectId,
-        date: new Date().toISOString().split('T')[0],
-        startTime,
-        endTime,
-        durationMinutes: minutes,
-        entryType: 'auto',
-        remarks: `Auto-tracked via timer`
-      });
-      setEntries(prev => [data, ...prev]);
-      toast.success(`✅ ${formatDuration(minutes)} logged for ${task?.title}`);
+      const res = await timer.stopAndSave();
+      if (res.success) {
+        setEntries(prev => [res.entry, ...prev]);
+        const taskTitle = res.entry.taskId?.title || 'task';
+        if (res.offline) {
+          toast.success(`💾 Saved offline: ${formatDuration(res.entry.durationMinutes)} for ${taskTitle}. Will sync when online.`);
+        } else {
+          toast.success(`✅ ${formatDuration(res.entry.durationMinutes)} logged for ${taskTitle}`);
+        }
+      }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to save time entry');
+      toast.error(err.message || 'Failed to save time entry');
     }
   };
 
@@ -224,6 +268,11 @@ export default function TimeTracking() {
                           <span className={`badge ${e.entryType === 'auto' ? 'badge-active' : 'badge-in-progress'}`}>
                             {e.entryType}
                           </span>
+                          {e.isOfflinePending && (
+                            <span className="badge badge-warning" style={{ marginLeft: 6, background: 'var(--orange)', color: 'white', borderColor: 'var(--orange)' }}>
+                              Pending Sync
+                            </span>
+                          )}
                         </td>
                         <td className="td-muted" style={{ maxWidth: 140 }}>{e.remarks || '—'}</td>
                         <td>

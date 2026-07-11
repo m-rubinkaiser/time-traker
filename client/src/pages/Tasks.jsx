@@ -212,31 +212,19 @@ export default function Tasks() {
   };
 
   const handleStopTimer = async () => {
-    const { totalSeconds, startedAt, taskId } = timer.stop();
-    if (totalSeconds < 60) {
-      toast.error('Timer must run for at least 1 minute');
-      return;
-    }
-    const minutes = Math.round(totalSeconds / 60);
-    const startTime = new Date(startedAt).toTimeString().slice(0, 5);
-    const endTime = new Date().toTimeString().slice(0, 5);
-
     try {
-      const task = tasks.find(t => t._id === taskId);
-      await API.post('/time-entries', {
-        taskId: task?._id,
-        projectId: task?.projectId?._id || task?.projectId,
-        date: new Date().toISOString().split('T')[0],
-        startTime,
-        endTime,
-        durationMinutes: minutes,
-        entryType: 'auto',
-        remarks: `Auto-tracked via timer`
-      });
-      fetchData();
-      toast.success(`✅ ${formatDuration(minutes)} logged for ${task?.title}`);
+      const res = await timer.stopAndSave();
+      if (res.success) {
+        const taskTitle = res.entry.taskId?.title || 'task';
+        if (res.offline) {
+          toast.success(`💾 Saved offline: ${formatDuration(res.entry.durationMinutes)} for ${taskTitle}. Will sync when online.`);
+        } else {
+          toast.success(`✅ ${formatDuration(res.entry.durationMinutes)} logged for ${taskTitle}`);
+        }
+        fetchData();
+      }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to save time entry');
+      toast.error(err.message || 'Failed to save time entry');
     }
   };  const getStatusCount = (s) => tasks.filter(t => t.status === s).length;
 
