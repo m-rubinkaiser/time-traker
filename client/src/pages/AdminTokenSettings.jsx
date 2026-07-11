@@ -84,6 +84,21 @@ export default function AdminTokenSettings() {
 
   return (
     <div className="animate-in" style={{ maxWidth: 750, margin: '0 auto' }}>
+      <style>{`
+        @media (max-width: 600px) {
+          .responsive-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .responsive-span-2 {
+            grid-column: span 1 !important;
+          }
+          .responsive-flex-row {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 12px !important;
+          }
+        }
+      `}</style>
       <div className="page-header" style={{ marginBottom: 24 }}>
         <div>
           <h1 className="page-title">System & API Token Configuration</h1>
@@ -101,7 +116,7 @@ export default function AdminTokenSettings() {
           </div>
 
           <form onSubmit={handleSaveSettings}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div className="responsive-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <div className="form-group">
                 <label className="form-label">JWT Token Expiry Duration</label>
                 <input
@@ -124,7 +139,7 @@ export default function AdminTokenSettings() {
                 />
               </div>
 
-              <div className="form-group" style={{ gridColumn: 'span 2' }}>
+              <div className="form-group responsive-span-2" style={{ gridColumn: 'span 2' }}>
                 <label className="form-label">Monthly Subscription Amount (₹)</label>
                 <input
                   type="number"
@@ -135,7 +150,7 @@ export default function AdminTokenSettings() {
                 />
               </div>
 
-              <div className="form-group" style={{ gridColumn: 'span 2' }}>
+              <div className="form-group responsive-span-2" style={{ gridColumn: 'span 2' }}>
                 <label className="form-label">Global Activation Token / Promo Code</label>
                 <input
                   type="text"
@@ -147,7 +162,7 @@ export default function AdminTokenSettings() {
                 />
               </div>
 
-              <div className="form-group" style={{ gridColumn: 'span 2', marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+              <div className="form-group responsive-span-2" style={{ gridColumn: 'span 2', marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 16 }}>
                 <label className="form-label" style={{ fontWeight: 600, display: 'block', marginBottom: 4 }}>
                   Daily Task Reminder Alert Times
                 </label>
@@ -253,7 +268,7 @@ export default function AdminTokenSettings() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* Force Logout all */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 24 }}>
+            <div className="responsive-flex-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 24 }}>
               <div>
                 <strong style={{ display: 'block', fontSize: 14 }}>Force Logout All Users</strong>
                 <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Invalidates active API sessions immediately. Users will need to log back in.</span>
@@ -269,7 +284,7 @@ export default function AdminTokenSettings() {
             </div>
 
             {/* Key rotation */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 24, borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+            <div className="responsive-flex-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 24, borderTop: '1px solid var(--border)', paddingTop: 16 }}>
               <div>
                 <strong style={{ display: 'block', fontSize: 14, color: 'var(--danger)' }}>Rotate API Signing Key</strong>
                 <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Generates a new global JWT cryptographic secret key. Instantly invalidates all signatures and forces logout system-wide.</span>

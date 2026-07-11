@@ -1,5 +1,5 @@
 import { useLocation } from 'react-router-dom';
-import { MdSearch, MdLightMode, MdDarkMode, MdNotifications } from 'react-icons/md';
+import { MdSearch, MdLightMode, MdDarkMode, MdNotifications, MdMenu } from 'react-icons/md';
 import { useState } from 'react';
 import useSettingsStore from '../../store/settingsStore';
 
@@ -12,7 +12,7 @@ const PAGE_TITLES = {
   '/settings': { title: 'Settings', sub: 'Customize your preferences' },
 };
 
-export default function Topbar() {
+export default function Topbar({ onToggleSidebar }) {
   const { pathname } = useLocation();
   const { theme, setTheme } = useSettingsStore();
   const [search, setSearch] = useState('');
@@ -23,9 +23,27 @@ export default function Topbar() {
 
   return (
     <header className="topbar">
-      <div>
-        <div className="topbar-title">{pageInfo.title}</div>
-        {pageInfo.sub && <div className="topbar-subtitle">{pageInfo.sub}</div>}
+      <style>{`
+        @media (max-width: 900px) {
+          .menu-toggle-btn {
+            display: inline-flex !important;
+            margin-right: 12px;
+          }
+        }
+      `}</style>
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        <button
+          className="btn btn-ghost btn-icon menu-toggle-btn"
+          onClick={onToggleSidebar}
+          style={{ display: 'none' }}
+          title="Toggle Navigation Menu"
+        >
+          <MdMenu size={22} />
+        </button>
+        <div>
+          <div className="topbar-title">{pageInfo.title}</div>
+          {pageInfo.sub && <div className="topbar-subtitle">{pageInfo.sub}</div>}
+        </div>
       </div>
 
       <div className="topbar-actions">

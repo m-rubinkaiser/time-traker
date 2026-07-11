@@ -108,6 +108,16 @@ export default function AdminDashboard() {
 
   return (
     <div className="animate-in">
+      <style>{`
+        @media (max-width: 768px) {
+          .charts-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .charts-grid > .card {
+            grid-column: span 1 !important;
+          }
+        }
+      `}</style>
       <div className="page-header" style={{ marginBottom: 24 }}>
         <div>
           <h1 className="page-title">Admin Dashboard</h1>

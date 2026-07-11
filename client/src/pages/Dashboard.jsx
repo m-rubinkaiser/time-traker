@@ -234,7 +234,14 @@ export default function Dashboard() {
       </div>
 
       {/* Recent Activity */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .dashboard-recent-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
+      <div className="dashboard-recent-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         {/* Recent Time Entries */}
         <div className="card">
           <div className="card-header">

@@ -139,6 +139,13 @@ export default function TimeTracking() {
 
   return (
     <div className="animate-in">
+      <style>{`
+        @media (max-width: 800px) {
+          .timetrack-layout {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
       <div className="page-header">
         <div>
           <div className="page-title">Time Tracking</div>
@@ -149,7 +156,7 @@ export default function TimeTracking() {
         </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '380px 1fr', gap: 24, alignItems: 'start' }}>
+      <div className="timetrack-layout" style={{ display: 'grid', gridTemplateColumns: '380px 1fr', gap: 24, alignItems: 'start' }}>
         {/* Timer Widget */}
         <div className="timer-widget">
           <div>

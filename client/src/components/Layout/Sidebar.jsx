@@ -22,7 +22,7 @@ const adminNavItems = [
   { to: '/admin/token-settings', icon: <MdSettings />, label: 'System Settings' }
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen, onClose }) {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
 
@@ -36,7 +36,7 @@ export default function Sidebar() {
   const activeNavItems = isAdmin ? adminNavItems : userNavItems;
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
       <div className="sidebar-logo">
         <div className="sidebar-logo-icon">⏱</div>
         <div>
@@ -52,6 +52,7 @@ export default function Sidebar() {
             key={item.to}
             to={item.to}
             className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            onClick={onClose}
           >
             <span className="nav-icon">{item.icon}</span>
             <span>{item.label}</span>
@@ -63,6 +64,7 @@ export default function Sidebar() {
           <NavLink
             to="/settings"
             className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            onClick={onClose}
           >
             <span className="nav-icon"><MdSettings /></span>
             <span>Settings</span>
@@ -75,7 +77,7 @@ export default function Sidebar() {
       </nav>
 
       <div className="sidebar-footer">
-        <NavLink to="/settings" className="user-card" style={{ textDecoration: 'none' }}>
+        <NavLink to="/settings" className="user-card" style={{ textDecoration: 'none' }} onClick={onClose}>
           <div className="user-avatar">{getInitials(user?.name)}</div>
           <div className="user-info">
             <div className="user-name">{user?.name}</div>
