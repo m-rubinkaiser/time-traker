@@ -7,14 +7,47 @@
   right: 0;
   bottom: 0;
   z-index: 99999;
-  background: rgba(10, 12, 18, 0.82);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(10, 12, 18, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   display: flex;
   justify-content: center;
   align-items: center;
   overflow: hidden;
   padding: 0;
+  cursor: none !important;
+}
+
+.portfolio-modal-overlay * {
+  cursor: none !important;
+}
+
+/* Custom Cropped Arrow Cursor */
+.portfolio-custom-cursor {
+  width: 44px;
+  height: 44px;
+  background-image: url('/custom-cursor.png');
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  background-position: left center;
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 100003;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+@keyframes fade-spark {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.2) translateY(8px);
+  }
 }
 
 .portfolio-modal-container {
@@ -68,20 +101,27 @@
   transform: rotate(90deg) scale(1.1);
 }
 
-/* Cursor Follower */
-.portfolio-cursor-follower {
-  width: 20px;
-  height: 20px;
-  background: rgba(99, 102, 241, 0.3);
-  border: 1px solid rgba(99, 102, 241, 0.6);
-  border-radius: 50%;
-  position: fixed;
-  pointer-events: none;
-  z-index: 100002;
-  transform: translate(-50%, -50%);
-  transition: transform 0.1s ease-out, opacity 0.3s ease-in-out;
-  opacity: 0;
+/* Floating profile animation */
+.profile-float {
+  animation: profile-float 6s ease-in-out infinite;
 }
+
+@keyframes profile-float {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-12px) scale(1.02); }
+}
+
+/* Bounce animations for CTA buttons */
+.btn-bounce {
+  animation: btn-bounce 2s infinite ease-in-out;
+}
+
+@keyframes btn-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+/* Cursor Follower removed */
 
 /* Home Section Particle Background */
 .portfolio-particles-canvas {
@@ -95,7 +135,7 @@
 }
 
 .portfolio-section {
-  padding: 100px 10%;
+  padding: 120px 12%;
   position: relative;
   z-index: 2;
   width: 100%;
@@ -103,7 +143,7 @@
 
 @media (max-width: 768px) {
   .portfolio-section {
-    padding: 60px 5%;
+    padding: 80px 6%;
   }
 }
 
@@ -113,54 +153,82 @@
   bottom: 30px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(15, 17, 23, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(15, 17, 23, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-full);
-  padding: 8px 24px;
+  padding: 10px 28px;
   display: flex;
-  gap: 16px;
-  backdrop-filter: blur(12px);
+  gap: 20px;
+  backdrop-filter: blur(16px);
   z-index: 100000;
   box-shadow: var(--shadow-lg);
 }
 
 .portfolio-nav-dot {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.2);
   cursor: pointer;
   transition: var(--transition);
 }
 
+.portfolio-nav-dot:hover {
+  background: rgba(255, 255, 255, 0.5);
+  transform: scale(1.2);
+}
+
 .portfolio-nav-dot.active {
   background: var(--accent);
-  box-shadow: 0 0 10px var(--accent);
-  transform: scale(1.3);
+  box-shadow: 0 0 12px var(--accent);
+  transform: scale(1.4);
 }
 
 /* Glassmorphism Card base */
 .glass-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: var(--radius-lg);
   padding: 30px;
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(12px);
   transition: all 0.3s ease;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
 .glass-card:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(99, 102, 241, 0.3);
+  box-shadow: 0 12px 40px rgba(99, 102, 241, 0.15);
+}
+
+/* Skill bars fill track */
+.skill-bar-track {
   background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(99, 102, 241, 0.4);
-  box-shadow: 0 10px 40px rgba(99, 102, 241, 0.15);
-  transform: translateY(-5px);
+  border-radius: var(--radius-full);
+  height: 6px;
+  width: 100%;
+  margin-top: 10px;
+  overflow: hidden;
+  position: relative;
+}
+
+.skill-bar-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: var(--radius-full);
+  transition: width 1s cubic-bezier(0.1, 1, 0.1, 1);
+}
+
+/* Skill Card Icon Rotation */
+.skill-card-animate:hover svg {
+  transform: rotate(15deg) scale(1.1);
+  transition: transform 0.3s ease;
 }
 
 /* Timelines styling */
 .timeline-wrapper {
   position: relative;
-  padding-left: 30px;
+  padding-left: 40px;
   margin-top: 30px;
 }
 
@@ -168,34 +236,42 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  left: 8px;
-  width: 2px;
+  left: 10px;
+  width: 3px;
   background: linear-gradient(to bottom, var(--accent), var(--purple), transparent);
 }
 
 .timeline-item {
   position: relative;
-  margin-bottom: 40px;
+  margin-bottom: 50px;
 }
 
 .timeline-bullet {
   position: absolute;
-  left: -29px;
+  left: -37px;
   top: 6px;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   background: var(--accent);
   border: 4px solid var(--bg-base);
-  box-shadow: 0 0 8px var(--accent);
+  box-shadow: 0 0 10px var(--accent);
+  transition: transform 0.3s ease;
 }
 
-/* Project Card Flip effect */
+.timeline-item:hover .timeline-bullet {
+  transform: scale(1.3);
+  background: var(--orange);
+  box-shadow: 0 0 12px var(--orange);
+}
+
+/* Project Card Flip & Spotlight Tilt effects */
 .project-flip-card {
   background-color: transparent;
   perspective: 1000px;
   height: 380px;
   cursor: pointer;
+  position: relative;
 }
 
 .project-flip-inner {
@@ -218,50 +294,59 @@
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
   border-radius: var(--radius-lg);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 .project-flip-front {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.02);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 30px;
 }
 
 .project-flip-back {
-  background: rgba(15, 17, 23, 0.95);
+  background: rgba(10, 12, 18, 0.96);
+  border-color: rgba(99, 102, 241, 0.3);
   transform: rotateY(180deg);
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding: 24px;
+  padding: 30px;
 }
 
-/* Spotlight overlay */
-.spotlight-container {
+/* Hover glow helper */
+.hover-glow {
   position: relative;
-  overflow: hidden;
 }
 
-.spotlight-glow {
+.hover-glow::after {
+  content: '';
   position: absolute;
-  width: 300px;
-  height: 300px;
-  background: radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, transparent 70%);
+  top: 0; left: 0; right: 0; bottom: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0);
+  transition: box-shadow 0.3s ease;
   pointer-events: none;
-  transform: translate(-50%, -50%);
-  z-index: 1;
+}
+
+.hover-glow:hover::after {
+  box-shadow: 0 0 24px rgba(99, 102, 241, 0.25);
 }
 
 /* Back to Top Floating Button */
 .back-to-top-btn {
   position: fixed;
-  bottom: 90px;
-  right: 25px;
+  bottom: 100px;
+  right: 30px;
   background: var(--accent);
   color: #fff;
   border: none;
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -283,5 +368,10 @@
 
 .back-to-top-btn:hover {
   background: var(--purple);
-  transform: translateY(-4px);
+  transform: translateY(-4px) scale(1.05);
+}
+
+/* Typing cursor blink */
+@keyframes blink {
+  50% { opacity: 0; }
 }

@@ -48,7 +48,8 @@ function useTypingEffect(words, speed = 100, delay = 2000) {
 export default function PortfolioModal({ isOpen, onClose }) {
   const containerRef = useRef(null);
   const canvasRef = useRef(null);
-  const followerRef = useRef(null);
+  const cursorRef = useRef(null);
+  const [sparks, setSparks] = useState([]);
   const [scrollProgress, setScrollProgress] = useState(0);
   const [activeSection, setActiveSection] = useState('home');
   const [counters, setCounters] = useState({ exp: 0, proj: 0, cert: 0 });
@@ -59,6 +60,15 @@ export default function PortfolioModal({ isOpen, onClose }) {
     'React & Node Developer',
     'AngularJS Specialist'
   ], 120, 2000);
+
+  // Mouse spotlight spotlight tracking
+  const handleSpotlightMove = (e, card) => {
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    card.style.setProperty('--x', `${x}px`);
+    card.style.setProperty('--y', `${y}px`);
+  };
 
   // Particle Background
   useEffect(() => {
@@ -75,16 +85,16 @@ export default function PortfolioModal({ isOpen, onClose }) {
     window.addEventListener('resize', resizeCanvas);
 
     const particles = [];
-    const particleCount = 45;
+    const particleCount = 60;
 
     for (let i = 0; i < particleCount; i++) {
       particles.push({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
         radius: Math.random() * 2 + 1,
-        vx: (Math.random() - 0.5) * 0.4,
-        vy: (Math.random() - 0.5) * 0.4,
-        alpha: Math.random() * 0.5 + 0.2
+        vx: (Math.random() - 0.5) * 0.5,
+        vy: (Math.random() - 0.5) * 0.5,
+        alpha: Math.random() * 0.6 + 0.2
       });
     }
 
@@ -99,10 +109,8 @@ export default function PortfolioModal({ isOpen, onClose }) {
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      // Draw links between close particles
       for (let i = 0; i < particles.length; i++) {
         const p1 = particles[i];
-        
         ctx.beginPath();
         ctx.arc(p1.x, p1.y, p1.radius, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(99, 102, 241, ${p1.alpha})`;
@@ -114,16 +122,15 @@ export default function PortfolioModal({ isOpen, onClose }) {
         if (p1.x < 0 || p1.x > canvas.width) p1.vx *= -1;
         if (p1.y < 0 || p1.y > canvas.height) p1.vy *= -1;
 
-        // Interactive mouse connection
         if (mouse.x && mouse.y) {
           const dx = p1.x - mouse.x;
           const dy = p1.y - mouse.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 120) {
+          if (dist < 130) {
             ctx.beginPath();
             ctx.moveTo(p1.x, p1.y);
             ctx.lineTo(mouse.x, mouse.y);
-            ctx.strokeStyle = `rgba(99, 102, 241, ${(1 - dist / 120) * 0.15})`;
+            ctx.strokeStyle = `rgba(99, 102, 241, ${(1 - dist / 130) * 0.2})`;
             ctx.lineWidth = 0.8;
             ctx.stroke();
           }
@@ -140,7 +147,7 @@ export default function PortfolioModal({ isOpen, onClose }) {
     };
   }, [isOpen]);
 
-  // Cursor Spotlight & Scroll Monitoring
+  // Scroll Progress and Highlight Indicator
   useEffect(() => {
     if (!isOpen) return;
 
@@ -152,13 +159,12 @@ export default function PortfolioModal({ isOpen, onClose }) {
         setScrollProgress(progress);
       }
 
-      // Check active section
       const sections = ['home', 'about', 'skills', 'experience', 'projects', 'education', 'certifications', 'contact'];
       for (const section of sections) {
         const el = document.getElementById(`portfolio-${section}`);
         if (el) {
           const rect = el.getBoundingClientRect();
-          if (rect.top <= 200 && rect.bottom >= 200) {
+          if (rect.top <= 250 && rect.bottom >= 250) {
             setActiveSection(section);
           }
         }
@@ -166,14 +172,59 @@ export default function PortfolioModal({ isOpen, onClose }) {
     };
 
     const handleGlobalMouseMove = (e) => {
-      if (followerRef.current) {
-        gsap.to(followerRef.current, {
+      if (cursorRef.current) {
+        gsap.to(cursorRef.current, {
           x: e.clientX,
           y: e.clientY,
-          duration: 0.1,
+          duration: 0,
           opacity: 1
         });
       }
+      
+      const sparkX = e.clientX + 12;
+      const sparkY = e.clientY + 28;
+      
+      setSparks((prev) => [
+        ...prev.slice(-10),
+        {
+          id: Math.random(),
+          x: sparkX,
+          y: sparkY,
+          size: Math.random() * 5 + 3
+        }
+      ]);
+    };
+
+    const handleMouseOver = (e) => {
+      if (e.target.closest('button, a, .portfolio-nav-dot, .project-flip-card, input, textarea, .social-icon-hover')) {
+        if (cursorRef.current) {
+          gsap.to(cursorRef.current, {
+            scale: 1.2,
+            rotate: -15,
+            duration: 0.2
+          });
+        }
+      }
+    };
+
+    const handleMouseOut = (e) => {
+      if (e.target.closest('button, a, .portfolio-nav-dot, .project-flip-card, input, textarea, .social-icon-hover')) {
+        if (cursorRef.current) {
+          gsap.to(cursorRef.current, {
+            scale: 1,
+            rotate: 0,
+            duration: 0.2
+          });
+        }
+      }
+    };
+
+    const handleMouseLeave = () => {
+      if (cursorRef.current) gsap.to(cursorRef.current, { opacity: 0, duration: 0.2 });
+    };
+
+    const handleMouseEnter = () => {
+      if (cursorRef.current) gsap.to(cursorRef.current, { opacity: 1, duration: 0.2 });
     };
 
     const container = containerRef.current;
@@ -181,16 +232,24 @@ export default function PortfolioModal({ isOpen, onClose }) {
       container.addEventListener('scroll', handleScroll);
     }
     window.addEventListener('mousemove', handleGlobalMouseMove);
+    document.addEventListener('mouseover', handleMouseOver);
+    document.addEventListener('mouseout', handleMouseOut);
+    document.addEventListener('mouseleave', handleMouseLeave);
+    document.addEventListener('mouseenter', handleMouseEnter);
 
     return () => {
       if (container) {
         container.removeEventListener('scroll', handleScroll);
       }
       window.removeEventListener('mousemove', handleGlobalMouseMove);
+      document.removeEventListener('mouseover', handleMouseOver);
+      document.removeEventListener('mouseout', handleMouseOut);
+      document.removeEventListener('mouseleave', handleMouseLeave);
+      document.removeEventListener('mouseenter', handleMouseEnter);
     };
   }, [isOpen]);
 
-  // Counter Incrementor Animation trigger
+  // About Section Counters Trigger
   useEffect(() => {
     if (!isOpen || activeSection !== 'about') return;
 
@@ -215,41 +274,75 @@ export default function PortfolioModal({ isOpen, onClose }) {
 
       setCounters({ exp: startExp, proj: startProj, cert: startCert });
       if (done) clearInterval(interval);
-    }, 100);
+    }, 120);
 
     return () => clearInterval(interval);
   }, [isOpen, activeSection]);
 
-  // GSAP Entrance Animations
+  // GSAP ScrollTrigger Animations
   useGSAP(() => {
     if (!isOpen) return;
 
-    // Hero timeline
+    // Home Hero Entrance
     const tl = gsap.timeline();
-    tl.fromTo('.hero-text-reveal', 
-      { x: -100, opacity: 0 }, 
-      { x: 0, opacity: 1, duration: 0.8, ease: 'power3.out', stagger: 0.2 }
+    tl.fromTo('.hero-text-slide', 
+      { x: -120, opacity: 0 }, 
+      { x: 0, opacity: 1, duration: 0.9, ease: 'power4.out', stagger: 0.15 }
     );
-    tl.fromTo('.hero-profile-container', 
+    tl.fromTo('.hero-profile-zoom', 
+      { scale: 0.5, opacity: 0, rotate: -10 }, 
+      { scale: 1, opacity: 1, rotate: 0, duration: 1, ease: 'back.out(1.7)' },
+      '-=0.7'
+    );
+    tl.fromTo('.hero-cta-bounce', 
       { scale: 0.8, opacity: 0 }, 
-      { scale: 1, opacity: 1, duration: 0.8, ease: 'back.out(1.5)' },
-      '-=0.6'
-    );
-    tl.fromTo('.hero-button-group button, .hero-button-group a', 
-      { y: 30, opacity: 0 }, 
-      { y: 0, opacity: 1, duration: 0.5, ease: 'power2.out', stagger: 0.1 },
-      '-=0.4'
+      { scale: 1, opacity: 1, duration: 0.6, ease: 'power2.out', stagger: 0.1 },
+      '-=0.5'
     );
 
-    // Staggered reveal for skills
-    gsap.fromTo('.skill-card-animate',
-      { y: 50, opacity: 0 },
+    // About trigger
+    gsap.fromTo('.about-slide-left',
+      { x: -100, opacity: 0 },
       {
-        y: 0,
+        x: 0,
         opacity: 1,
-        duration: 0.6,
-        stagger: 0.08,
+        duration: 0.8,
         ease: 'power2.out',
+        scrollTrigger: {
+          trigger: '#portfolio-about',
+          scroller: containerRef.current,
+          start: 'top 75%'
+        }
+      }
+    );
+
+    // Skills animate bars fill on scroll
+    gsap.utils.toArray('.skill-bar-fill').forEach((bar) => {
+      const level = bar.getAttribute('data-level');
+      gsap.fromTo(bar,
+        { width: '0%' },
+        {
+          width: level,
+          duration: 1.5,
+          ease: 'power4.out',
+          scrollTrigger: {
+            trigger: bar,
+            scroller: containerRef.current,
+            start: 'top 90%'
+          }
+        }
+      );
+    });
+
+    // Skill cards stagger pop
+    gsap.fromTo('.skill-card-animate',
+      { scale: 0.8, opacity: 0 },
+      {
+        scale: 1,
+        opacity: 1,
+        duration: 0.7,
+        stagger: 0.1,
+        ease: 'back.out(1.2)',
         scrollTrigger: {
           trigger: '#portfolio-skills',
           scroller: containerRef.current,
@@ -258,37 +351,107 @@ export default function PortfolioModal({ isOpen, onClose }) {
       }
     );
 
-    // Timeline line reveal
-    gsap.fromTo('.timeline-line',
-      { scaleY: 0 },
+    // Experience alternating slides (Timeline Card Slide Alternately)
+    gsap.utils.toArray('.timeline-item').forEach((item, index) => {
+      const direction = index % 2 === 0 ? -120 : 120;
+      gsap.fromTo(item.querySelector('.glass-card'),
+        { x: direction, opacity: 0 },
+        {
+          x: 0,
+          opacity: 1,
+          duration: 0.9,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: item,
+            scroller: containerRef.current,
+            start: 'top 80%'
+          }
+        }
+      );
+    });
+
+    // Projects fade & scale on scroll
+    gsap.fromTo('.project-card-scroll',
+      { scale: 0.9, opacity: 0, y: 50 },
       {
-        scaleY: 1,
-        duration: 1.2,
-        ease: 'none',
-        transformOrigin: 'top center',
+        scale: 1,
+        opacity: 1,
+        y: 0,
+        duration: 0.8,
+        stagger: 0.12,
+        ease: 'power2.out',
         scrollTrigger: {
-          trigger: '#portfolio-experience',
+          trigger: '#portfolio-projects',
           scroller: containerRef.current,
           start: 'top 70%'
         }
       }
     );
 
-    // Timeline item bullets and slides
-    gsap.fromTo('.timeline-item',
-      { x: -50, opacity: 0 },
+    // Certifications trigger reveal
+    gsap.fromTo('.cert-card-animate',
+      { y: 60, opacity: 0 },
       {
-        x: 0,
+        y: 0,
         opacity: 1,
-        duration: 0.8,
-        stagger: 0.3,
+        duration: 0.7,
+        stagger: 0.15,
+        ease: 'power2.out',
         scrollTrigger: {
-          trigger: '#portfolio-experience',
+          trigger: '#portfolio-certifications',
           scroller: containerRef.current,
-          start: 'top 60%'
+          start: 'top 80%'
         }
       }
     );
+
+    // Education slide upward trigger
+    gsap.fromTo('#portfolio-education .timeline-item',
+      { y: 80, opacity: 0 },
+      {
+        y: 0,
+        opacity: 1,
+        duration: 0.8,
+        stagger: 0.25,
+        ease: 'power2.out',
+        scrollTrigger: {
+          trigger: '#portfolio-education',
+          scroller: containerRef.current,
+          start: 'top 75%'
+        }
+      }
+    );
+
+    // Contact sections slide left/right
+    gsap.fromTo('.contact-left-slide',
+      { x: -120, opacity: 0 },
+      {
+        x: 0,
+        opacity: 1,
+        duration: 0.9,
+        ease: 'power3.out',
+        scrollTrigger: {
+          trigger: '#portfolio-contact',
+          scroller: containerRef.current,
+          start: 'top 75%'
+        }
+      }
+    );
+    gsap.fromTo('.contact-right-slide',
+      { x: 120, opacity: 0 },
+      {
+        x: 0,
+        opacity: 1,
+        duration: 0.9,
+        ease: 'power3.out',
+        scrollTrigger: {
+          trigger: '#portfolio-contact',
+          scroller: containerRef.current,
+          start: 'top 75%'
+        }
+      }
+    );
+
   }, { scope: containerRef, dependencies: [isOpen] });
 
   if (!isOpen) return null;
@@ -311,8 +474,29 @@ export default function PortfolioModal({ isOpen, onClose }) {
       {/* Scroll indicator */}
       <div className="portfolio-scroll-progress" style={{ width: `${scrollProgress}%` }} />
 
-      {/* Floating Cursor Follower */}
-      <div className="portfolio-cursor-follower" ref={followerRef} />
+      {/* Custom Cropped Arrow Cursor */}
+      <div className="portfolio-custom-cursor" ref={cursorRef} />
+
+      {/* Trailing energy sparks */}
+      {sparks.map(s => (
+        <div 
+          key={s.id}
+          style={{
+            position: 'fixed',
+            top: s.y,
+            left: s.x,
+            width: s.size,
+            height: s.size,
+            background: 'linear-gradient(to right, var(--orange), #ff4500)',
+            boxShadow: '0 0 10px var(--orange), 0 0 4px #ff4500',
+            borderRadius: '50%',
+            pointerEvents: 'none',
+            zIndex: 100002,
+            transform: 'translate(-50%, -50%)',
+            animation: 'fade-spark 0.4s forwards ease-out'
+          }}
+        />
+      ))}
 
       {/* Close button */}
       <button className="portfolio-close-btn" onClick={onClose} title="Close Portfolio">
@@ -339,43 +523,43 @@ export default function PortfolioModal({ isOpen, onClose }) {
           
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 40, width: '100%', alignItems: 'center' }}>
             <div style={{ order: 2 }}>
-              <div className="hero-profile-container" style={{ width: 280, height: 280, margin: '0 auto', borderRadius: '50%', overflow: 'hidden', border: '4px solid var(--accent)', boxShadow: 'var(--shadow-accent)', background: 'var(--bg-surface)' }}>
+              <div className="hero-profile-zoom profile-float" style={{ width: 280, height: 280, margin: '0 auto', borderRadius: '50%', overflow: 'hidden', border: '4px solid var(--accent)', boxShadow: 'var(--shadow-accent)', background: 'var(--bg-surface)' }}>
                 <img src="/profile.jpg" alt="Rubin Kaiser" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
             </div>
             
             <div style={{ order: 1 }}>
-              <h4 className="hero-text-reveal" style={{ color: 'var(--accent)', fontWeight: 600, letterSpacing: 1, marginBottom: 12 }}>👋 WELCOME TO MY WORLD</h4>
-              <h1 className="hero-text-reveal" style={{ fontSize: '3.2rem', fontWeight: 800, lineHeight: 1.2, marginBottom: 16 }}>
+              <h4 className="hero-text-slide" style={{ color: 'var(--accent)', fontWeight: 600, letterSpacing: 1, marginBottom: 12 }}>👋 WELCOME TO MY WORLD</h4>
+              <h1 className="hero-text-slide" style={{ fontSize: '3.2rem', fontWeight: 800, lineHeight: 1.2, marginBottom: 16 }}>
                 Hi, I'm <span style={{ background: 'linear-gradient(to right, var(--accent), var(--purple))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Rubin Kaiser M</span>
               </h1>
-              <h2 className="hero-text-reveal" style={{ fontSize: '1.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 24, height: 40 }}>
+              <h2 className="hero-text-slide" style={{ fontSize: '1.8rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 24, height: 40 }}>
                 a <span style={{ color: 'var(--orange)' }}>{typedRole}</span><span className="typed-cursor" style={{ animation: 'blink 0.7s infinite' }}>|</span>
               </h2>
               
-              <div className="hero-button-group" style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginTop: 32 }}>
+              <div className="hero-cta-bounce" style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginTop: 32 }}>
                 <a 
                   href="/resume.pdf" 
                   download 
-                  className="btn btn-primary"
+                  className="btn btn-primary btn-bounce"
                   style={{ gap: 8, display: 'inline-flex', padding: '12px 24px', borderRadius: 'var(--radius-full)' }}
                 >
                   <MdFileDownload size={20} /> Download Resume
                 </a>
                 <button 
                   onClick={() => handleDotClick('contact')} 
-                  className="btn btn-secondary"
+                  className="btn btn-secondary btn-bounce"
                   style={{ padding: '12px 24px', borderRadius: 'var(--radius-full)' }}
                 >
                   Hire Me
                 </button>
               </div>
 
-              <div className="hero-text-reveal" style={{ display: 'flex', gap: 20, marginTop: 40 }}>
+              <div className="hero-text-slide" style={{ display: 'flex', gap: 20, marginTop: 40 }}>
                 <a href="https://linkedin.com/in/rubin-kaiser-m-b605962b9" target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)', fontSize: 24, transition: 'var(--transition)' }} className="social-icon-hover">
                   <FaLinkedin />
                 </a>
-                <a href="https://github.com/mrubinkaiser" target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)', fontSize: 24, transition: 'var(--transition)' }} className="social-icon-hover">
+                <a href="https://github.com/m-rubinkaiser" target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)', fontSize: 24, transition: 'var(--transition)' }} className="social-icon-hover">
                   <FaGithub />
                 </a>
                 <a href="mailto:m.rubinkaiser@gmail.com" style={{ color: 'var(--text-muted)', fontSize: 24, transition: 'var(--transition)' }} className="social-icon-hover">
@@ -391,7 +575,7 @@ export default function PortfolioModal({ isOpen, onClose }) {
           <h2 style={{ fontSize: '2.5rem', fontWeight: 800, textAlign: 'center', marginBottom: 60 }}>About Me</h2>
           
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 40 }}>
-            <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <div className="glass-card about-slide-left" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
               <h3 style={{ fontSize: '1.6rem', marginBottom: 16, color: 'var(--accent)' }}>Who I Am</h3>
               <p style={{ color: 'var(--text-secondary)', marginBottom: 20, fontSize: '1.05rem', lineHeight: 1.7 }}>
                 Hi, I'm **Rubin Kaiser M**, a Full Stack Developer specializing in Laravel, PHP, AngularJS, and React. 
@@ -404,15 +588,15 @@ export default function PortfolioModal({ isOpen, onClose }) {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, alignItems: 'center' }}>
-              <div className="glass-card" style={{ textAlign: 'center', padding: '24px 10px' }}>
+              <div className="glass-card about-slide-left hover-glow" style={{ textAlign: 'center', padding: '24px 10px' }}>
                 <h3 style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--accent)', margin: 0 }}>{counters.exp}+</h3>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: 8 }}>Years Experience</p>
               </div>
-              <div className="glass-card" style={{ textAlign: 'center', padding: '24px 10px' }}>
+              <div className="glass-card about-slide-left hover-glow" style={{ textAlign: 'center', padding: '24px 10px' }}>
                 <h3 style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--purple)', margin: 0 }}>{counters.proj}+</h3>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: 8 }}>Projects Built</p>
               </div>
-              <div className="glass-card" style={{ textAlign: 'center', padding: '24px 10px' }}>
+              <div className="glass-card about-slide-left hover-glow" style={{ textAlign: 'center', padding: '24px 10px' }}>
                 <h3 style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--orange)', margin: 0 }}>{counters.cert}+</h3>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: 8 }}>Certifications</p>
               </div>
@@ -429,9 +613,24 @@ export default function PortfolioModal({ isOpen, onClose }) {
             {/* Frontend */}
             <div className="glass-card skill-card-animate">
               <h3 style={{ fontSize: '1.2rem', marginBottom: 20, color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 8 }}>Frontend</h3>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {['HTML5', 'CSS3', 'JavaScript', 'React.js', 'AngularJS', 'Responsive Design'].map(s => (
-                  <span key={s} style={{ background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.2)', padding: '6px 12px', borderRadius: 'var(--radius-sm)', fontSize: 13 }}>{s}</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {[
+                  { name: 'HTML5', level: '95%' },
+                  { name: 'CSS3', level: '92%' },
+                  { name: 'JavaScript', level: '90%' },
+                  { name: 'React.js', level: '88%' },
+                  { name: 'AngularJS', level: '85%' },
+                  { name: 'Responsive Design', level: '95%' }
+                ].map(s => (
+                  <div key={s.name}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                      <span>{s.name}</span>
+                      <span style={{ color: 'var(--text-muted)' }}>{s.level}</span>
+                    </div>
+                    <div className="skill-bar-track">
+                      <div className="skill-bar-fill" data-level={s.level} style={{ background: 'var(--accent)' }} />
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
@@ -439,9 +638,23 @@ export default function PortfolioModal({ isOpen, onClose }) {
             {/* Backend */}
             <div className="glass-card skill-card-animate">
               <h3 style={{ fontSize: '1.2rem', marginBottom: 20, color: 'var(--purple)', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 8 }}>Backend</h3>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {['PHP', 'Laravel', 'Node.js', 'Flask', 'Go (Golang)'].map(s => (
-                  <span key={s} style={{ background: 'rgba(168, 85, 247, 0.1)', border: '1px solid rgba(168, 85, 247, 0.2)', padding: '6px 12px', borderRadius: 'var(--radius-sm)', fontSize: 13 }}>{s}</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {[
+                  { name: 'PHP', level: '92%' },
+                  { name: 'Laravel', level: '90%' },
+                  { name: 'Node.js', level: '82%' },
+                  { name: 'Flask', level: '78%' },
+                  { name: 'Go (Golang)', level: '70%' }
+                ].map(s => (
+                  <div key={s.name}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                      <span>{s.name}</span>
+                      <span style={{ color: 'var(--text-muted)' }}>{s.level}</span>
+                    </div>
+                    <div className="skill-bar-track">
+                      <div className="skill-bar-fill" data-level={s.level} style={{ background: 'var(--purple)' }} />
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
@@ -449,20 +662,35 @@ export default function PortfolioModal({ isOpen, onClose }) {
             {/* Database */}
             <div className="glass-card skill-card-animate">
               <h3 style={{ fontSize: '1.2rem', marginBottom: 20, color: 'var(--orange)', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 8 }}>Database</h3>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {['MySQL', 'PostgreSQL', 'MongoDB', 'PhpMyAdmin'].map(s => (
-                  <span key={s} style={{ background: 'rgba(249, 115, 22, 0.1)', border: '1px solid rgba(249, 115, 22, 0.2)', padding: '6px 12px', borderRadius: 'var(--radius-sm)', fontSize: 13 }}>{s}</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {[
+                  { name: 'MySQL', level: '88%' },
+                  { name: 'PostgreSQL', level: '82%' },
+                  { name: 'MongoDB', level: '85%' },
+                  { name: 'PhpMyAdmin', level: '90%' }
+                ].map(s => (
+                  <div key={s.name}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                      <span>{s.name}</span>
+                      <span style={{ color: 'var(--text-muted)' }}>{s.level}</span>
+                    </div>
+                    <div className="skill-bar-track">
+                      <div className="skill-bar-fill" data-level={s.level} style={{ background: 'var(--orange)' }} />
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
 
-            {/* Programming & Libraries */}
-            <div className="glass-card skill-card-animate">
-              <h3 style={{ fontSize: '1.2rem', marginBottom: 20, color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 8 }}>Programming & Libraries</h3>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {['Python', 'JavaScript', 'Go', 'SQL', 'GSAP', 'Pandas', 'Beautiful Soup', 'Tkinter', 'Turtle Graphics'].map(s => (
-                  <span key={s} style={{ background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.2)', padding: '6px 12px', borderRadius: 'var(--radius-sm)', fontSize: 13 }}>{s}</span>
-                ))}
+            {/* Other Library items */}
+            <div className="glass-card skill-card-animate" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div>
+                <h3 style={{ fontSize: '1.2rem', marginBottom: 20, color: 'var(--accent)', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: 8 }}>Libraries & Methods</h3>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {['GSAP', 'Pandas', 'Beautiful Soup', 'Tkinter', 'Turtle Graphics', 'REST APIs', 'JSON', 'Version Control (Git)', 'Web Development'].map(s => (
+                    <span key={s} style={{ background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.2)', padding: '6px 12px', borderRadius: 'var(--radius-sm)', fontSize: 12 }}>{s}</span>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -478,7 +706,7 @@ export default function PortfolioModal({ isOpen, onClose }) {
             
             <div className="timeline-item">
               <div className="timeline-bullet" />
-              <div className="glass-card" style={{ marginLeft: 20 }}>
+              <div className="glass-card hover-glow" style={{ marginLeft: 20 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
                   <div>
                     <h3 style={{ fontSize: '1.3rem', fontWeight: 700 }}>Laravel Developer</h3>
@@ -500,8 +728,8 @@ export default function PortfolioModal({ isOpen, onClose }) {
             </div>
 
             <div className="timeline-item">
-              <div className="timeline-bullet" style={{ background: 'var(--purple)', boxShadow: '0 0 8px var(--purple)' }} />
-              <div className="glass-card" style={{ marginLeft: 20 }}>
+              <div className="timeline-bullet" style={{ background: 'var(--purple)', boxShadow: '0 0 10px var(--purple)' }} />
+              <div className="glass-card hover-glow" style={{ marginLeft: 20 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
                   <div>
                     <h3 style={{ fontSize: '1.3rem', fontWeight: 700 }}>React Developer Intern</h3>
@@ -532,13 +760,16 @@ export default function PortfolioModal({ isOpen, onClose }) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24 }}>
             
             {/* Project 1: Weather Dashboard */}
-            <div className="project-flip-card">
+            <div 
+              className="project-flip-card project-card-scroll hover-glow"
+              onMouseMove={(e) => handleSpotlightMove(e, e.currentTarget)}
+            >
               <div className="project-flip-inner">
-                <div className="project-flip-front glass-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
+                <div className="project-flip-front">
                   <div>
                     <MdFolder size={40} style={{ color: 'var(--accent)' }} />
                     <h3 style={{ fontSize: '1.4rem', marginTop: 16 }}>Weather Dashboard</h3>
-                    <p style={{ color: 'var(--text-secondary)', marginTop: 8, fontSize: '0.9rem' }}>Real-time location-based weather monitoring dashboard integrated with multiple visual forecast charts.</p>
+                    <p style={{ color: 'var(--text-secondary)', marginTop: 8, fontSize: '0.9rem' }}>Real-time location-based weather monitoring dashboard integrated with multiple forecast charts.</p>
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {['React', 'Vite', 'OpenWeatherAPI'].map(t => <span key={t} style={{ fontSize: 11, color: 'var(--text-muted)' }}>#{t}</span>)}
@@ -548,7 +779,7 @@ export default function PortfolioModal({ isOpen, onClose }) {
                   <h3>Weather Dashboard</h3>
                   <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '12px 0 24px' }}>Fetches geo-coordinates and plots temperatures and trends.</p>
                   <div style={{ display: 'flex', gap: 12 }}>
-                    <a href="https://github.com/mrubinkaiser" target="_blank" rel="noreferrer" className="btn btn-secondary btn-sm" style={{ gap: 6 }}><FaGithub /> GitHub</a>
+                    <a href="https://github.com/m-rubinkaiser" target="_blank" rel="noreferrer" className="btn btn-secondary btn-sm" style={{ gap: 6 }}><FaGithub /> GitHub</a>
                     <a href="#" className="btn btn-primary btn-sm" style={{ gap: 6 }}><MdLaunch /> Live Demo</a>
                   </div>
                 </div>
@@ -556,9 +787,12 @@ export default function PortfolioModal({ isOpen, onClose }) {
             </div>
 
             {/* Project 2: Recipe Hub */}
-            <div className="project-flip-card">
+            <div 
+              className="project-flip-card project-card-scroll hover-glow"
+              onMouseMove={(e) => handleSpotlightMove(e, e.currentTarget)}
+            >
               <div className="project-flip-inner">
-                <div className="project-flip-front glass-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
+                <div className="project-flip-front">
                   <div>
                     <MdFolder size={40} style={{ color: 'var(--purple)' }} />
                     <h3 style={{ fontSize: '1.4rem', marginTop: 16 }}>Recipe Hub</h3>
@@ -572,7 +806,7 @@ export default function PortfolioModal({ isOpen, onClose }) {
                   <h3>Recipe Hub</h3>
                   <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '12px 0 24px' }}>Dynamic recipe manager with login, ratings, and filters.</p>
                   <div style={{ display: 'flex', gap: 12 }}>
-                    <a href="https://github.com/mrubinkaiser" target="_blank" rel="noreferrer" className="btn btn-secondary btn-sm" style={{ gap: 6 }}><FaGithub /> GitHub</a>
+                    <a href="https://github.com/m-rubinkaiser" target="_blank" rel="noreferrer" className="btn btn-secondary btn-sm" style={{ gap: 6 }}><FaGithub /> GitHub</a>
                     <a href="#" className="btn btn-primary btn-sm" style={{ gap: 6 }}><MdLaunch /> Live Demo</a>
                   </div>
                 </div>
@@ -580,9 +814,12 @@ export default function PortfolioModal({ isOpen, onClose }) {
             </div>
 
             {/* Project 3: Student Result Analysis */}
-            <div className="project-flip-card">
+            <div 
+              className="project-flip-card project-card-scroll hover-glow"
+              onMouseMove={(e) => handleSpotlightMove(e, e.currentTarget)}
+            >
               <div className="project-flip-inner">
-                <div className="project-flip-front glass-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
+                <div className="project-flip-front">
                   <div>
                     <MdFolder size={40} style={{ color: 'var(--orange)' }} />
                     <h3 style={{ fontSize: '1.4rem', marginTop: 16 }}>Student Result Analysis</h3>
@@ -596,7 +833,7 @@ export default function PortfolioModal({ isOpen, onClose }) {
                   <h3>Student Analysis</h3>
                   <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '12px 0 24px' }}>Processes grading lists and plots visual analytics charts.</p>
                   <div style={{ display: 'flex', gap: 12 }}>
-                    <a href="https://github.com/mrubinkaiser" target="_blank" rel="noreferrer" className="btn btn-secondary btn-sm" style={{ gap: 6 }}><FaGithub /> GitHub</a>
+                    <a href="https://github.com/m-rubinkaiser" target="_blank" rel="noreferrer" className="btn btn-secondary btn-sm" style={{ gap: 6 }}><FaGithub /> GitHub</a>
                     <a href="#" className="btn btn-primary btn-sm" style={{ gap: 6 }}><MdLaunch /> Live Demo</a>
                   </div>
                 </div>
@@ -604,9 +841,12 @@ export default function PortfolioModal({ isOpen, onClose }) {
             </div>
 
             {/* Project 4: E-Commerce Web */}
-            <div className="project-flip-card">
+            <div 
+              className="project-flip-card project-card-scroll hover-glow"
+              onMouseMove={(e) => handleSpotlightMove(e, e.currentTarget)}
+            >
               <div className="project-flip-inner">
-                <div className="project-flip-front glass-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
+                <div className="project-flip-front">
                   <div>
                     <MdFolder size={40} style={{ color: 'var(--accent)' }} />
                     <h3 style={{ fontSize: '1.4rem', marginTop: 16 }}>E-Commerce Store</h3>
@@ -620,7 +860,7 @@ export default function PortfolioModal({ isOpen, onClose }) {
                   <h3>E-Commerce Store</h3>
                   <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '12px 0 24px' }}>A premium shopping template with backend APIs.</p>
                   <div style={{ display: 'flex', gap: 12 }}>
-                    <a href="https://github.com/mrubinkaiser" target="_blank" rel="noreferrer" className="btn btn-secondary btn-sm" style={{ gap: 6 }}><FaGithub /> GitHub</a>
+                    <a href="https://github.com/m-rubinkaiser" target="_blank" rel="noreferrer" className="btn btn-secondary btn-sm" style={{ gap: 6 }}><FaGithub /> GitHub</a>
                     <a href="#" className="btn btn-primary btn-sm" style={{ gap: 6 }}><MdLaunch /> Live Demo</a>
                   </div>
                 </div>
@@ -628,9 +868,12 @@ export default function PortfolioModal({ isOpen, onClose }) {
             </div>
 
             {/* Project 5: TimeTrack Application */}
-            <div className="project-flip-card">
+            <div 
+              className="project-flip-card project-card-scroll hover-glow"
+              onMouseMove={(e) => handleSpotlightMove(e, e.currentTarget)}
+            >
               <div className="project-flip-inner">
-                <div className="project-flip-front glass-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
+                <div className="project-flip-front">
                   <div>
                     <MdFolder size={40} style={{ color: 'var(--purple)' }} />
                     <h3 style={{ fontSize: '1.4rem', marginTop: 16 }}>TimeTrack System</h3>
@@ -644,7 +887,7 @@ export default function PortfolioModal({ isOpen, onClose }) {
                   <h3>TimeTrack System</h3>
                   <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '12px 0 24px' }}>Complete MERN task auditor with custom settings.</p>
                   <div style={{ display: 'flex', gap: 12 }}>
-                    <a href="https://github.com/mrubinkaiser" target="_blank" rel="noreferrer" className="btn btn-secondary btn-sm" style={{ gap: 6 }}><FaGithub /> GitHub</a>
+                    <a href="https://github.com/m-rubinkaiser" target="_blank" rel="noreferrer" className="btn btn-secondary btn-sm" style={{ gap: 6 }}><FaGithub /> GitHub</a>
                     <a href="#" className="btn btn-primary btn-sm" style={{ gap: 6 }}><MdLaunch /> Live Demo</a>
                   </div>
                 </div>
@@ -663,7 +906,7 @@ export default function PortfolioModal({ isOpen, onClose }) {
 
             <div className="timeline-item">
               <div className="timeline-bullet" />
-              <div className="glass-card" style={{ marginLeft: 20 }}>
+              <div className="glass-card hover-glow" style={{ marginLeft: 20 }}>
                 <h3 style={{ fontSize: '1.3rem', fontWeight: 700 }}>M.Sc Computer Science</h3>
                 <h4 style={{ color: 'var(--accent)', fontWeight: 500, margin: '4px 0 8px' }}>Postgraduate Degree</h4>
                 <p style={{ color: 'var(--text-secondary)' }}>
@@ -673,8 +916,8 @@ export default function PortfolioModal({ isOpen, onClose }) {
             </div>
 
             <div className="timeline-item">
-              <div className="timeline-bullet" style={{ background: 'var(--purple)', boxShadow: '0 0 8px var(--purple)' }} />
-              <div className="glass-card" style={{ marginLeft: 20 }}>
+              <div className="timeline-bullet" style={{ background: 'var(--purple)', boxShadow: '0 0 10px var(--purple)' }} />
+              <div className="glass-card hover-glow" style={{ marginLeft: 20 }}>
                 <h3 style={{ fontSize: '1.3rem', fontWeight: 700 }}>B.Sc Computer Science</h3>
                 <h4 style={{ color: 'var(--purple)', fontWeight: 500, margin: '4px 0 8px' }}>Undergraduate Degree</h4>
                 <p style={{ color: 'var(--text-secondary)' }}>
@@ -692,7 +935,7 @@ export default function PortfolioModal({ isOpen, onClose }) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24 }}>
             
             {/* Cert 1 */}
-            <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className="glass-card cert-card-animate hover-glow" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <MdWorkspacePremium size={32} style={{ color: 'var(--orange)' }} />
               <h3 style={{ fontSize: '1.15rem', fontWeight: 700 }}>100 Days of Code: The Complete Python Pro Bootcamp</h3>
               <h4 style={{ color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500 }}>Udemy - Issued Jan 2023</h4>
@@ -704,7 +947,7 @@ export default function PortfolioModal({ isOpen, onClose }) {
             </div>
 
             {/* Cert 2 */}
-            <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className="glass-card cert-card-animate hover-glow" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <MdWorkspacePremium size={32} style={{ color: 'var(--accent)' }} />
               <h3 style={{ fontSize: '1.15rem', fontWeight: 700 }}>Introduction to Web Design and Development</h3>
               <h4 style={{ color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500 }}>LinkedIn - Issued Oct 2023</h4>
@@ -712,7 +955,7 @@ export default function PortfolioModal({ isOpen, onClose }) {
             </div>
 
             {/* Cert 3 */}
-            <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div className="glass-card cert-card-animate hover-glow" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <MdWorkspacePremium size={32} style={{ color: 'var(--purple)' }} />
               <h3 style={{ fontSize: '1.15rem', fontWeight: 700 }}>HTML Essential Training</h3>
               <h4 style={{ color: 'var(--text-secondary)', fontSize: 13, fontWeight: 500 }}>LinkedIn - Issued Oct 2023</h4>
@@ -727,7 +970,7 @@ export default function PortfolioModal({ isOpen, onClose }) {
           <h2 style={{ fontSize: '2.5rem', fontWeight: 800, textAlign: 'center', marginBottom: 60 }}>Get In Touch</h2>
           
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 40 }}>
-            <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            <div className="glass-card contact-left-slide" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
               <h3 style={{ fontSize: '1.4rem', color: 'var(--accent)' }}>Contact Information</h3>
               <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                 Feel free to drop a line, discuss custom Laravel or React dashboard integrations, or schedule standard recruitment syncs.
@@ -744,12 +987,12 @@ export default function PortfolioModal({ isOpen, onClose }) {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <FaGithub size={20} style={{ color: 'var(--accent)' }} />
-                  <a href="https://github.com/mrubinkaiser" target="_blank" rel="noreferrer" style={{ textDecoration: 'underline' }}>GitHub Repositories</a>
+                  <a href="https://github.com/m-rubinkaiser" target="_blank" rel="noreferrer" style={{ textDecoration: 'underline' }}>GitHub Repositories</a>
                 </div>
               </div>
             </div>
 
-            <div className="glass-card">
+            <div className="glass-card contact-right-slide">
               <form onSubmit={e => { e.preventDefault(); alert('Message sent successfully!'); }} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <label style={{ fontSize: 12, color: 'var(--text-muted)' }}>Name</label>
@@ -770,7 +1013,7 @@ export default function PortfolioModal({ isOpen, onClose }) {
         </section>
 
         {/* Section 9: Footer */}
-        <footer style={{ background: 'rgba(10, 12, 18, 0.95)', padding: '40px 10% 80px', color: 'var(--text-secondary)', fontSize: 13 }}>
+        <footer style={{ background: 'rgba(10, 12, 18, 0.95)', padding: '40px 10% 80px', color: 'var(--text-secondary)', fontSize: 13 }} className="portfolio-footer-fade">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 24 }}>
             <div>
               <h3 style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 16, marginBottom: 8 }}>Rubin Kaiser M</h3>
