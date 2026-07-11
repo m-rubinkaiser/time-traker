@@ -34,8 +34,8 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Dat
 app.get('/api/health/test-email', async (req, res) => {
   const { runDailyNotificationJob } = require('./services/scheduler');
   try {
-    await runDailyNotificationJob();
-    res.json({ message: 'Daily notification job triggered. Check server console for logs.' });
+    const report = await runDailyNotificationJob();
+    res.json({ message: 'Daily notification job finished.', report });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -8,6 +8,7 @@ const { sendPendingTasksEmail } = require('./mailService');
  */
 const runDailyNotificationJob = async () => {
   console.log('[Scheduler] Running daily task notification job...');
+  const results = [];
   try {
     const users = await User.find({});
     console.log(`[Scheduler] Found ${users.length} users to process.`);
@@ -23,16 +24,21 @@ const runDailyNotificationJob = async () => {
         console.log(`[Scheduler] User ${user.email} has ${pendingTasks.length} pending tasks. Sending email...`);
         try {
           await sendPendingTasksEmail(user.email, user.name, pendingTasks);
+          results.push({ email: user.email, status: 'success', taskCount: pendingTasks.length });
         } catch (mailErr) {
           console.error(`[Scheduler] Failed to send email to ${user.email}:`, mailErr.message);
+          results.push({ email: user.email, status: 'failed', error: mailErr.message, taskCount: pendingTasks.length });
         }
       } else {
         console.log(`[Scheduler] User ${user.email} has no pending tasks. Skipping.`);
+        results.push({ email: user.email, status: 'skipped (no pending tasks)', taskCount: 0 });
       }
     }
     console.log('[Scheduler] Daily task notification job finished.');
+    return { success: true, results };
   } catch (err) {
     console.error('[Scheduler] Error in daily notification job:', err.message);
+    return { success: false, error: err.message };
   }
 };
 
