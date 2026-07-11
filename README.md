@@ -1,9 +1,9 @@
 # ⏱️ TimeTrack — Project Time Tracker & Todo System
 
-[![Vercel Deployment](https://img.shields.ly/badge/Deployment-Live%20on%20Vercel-success?style=for-the-badge&logo=vercel&logoColor=white)](https://todolist-drab-tau.vercel.app/)
-[![React Version](https://img.shields.ly/badge/Frontend-React%2019-61DAFB?style=for-the-badge&logo=react&logoColor=white)](https://react.dev/)
-[![Node Version](https://img.shields.ly/badge/Backend-Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
-[![Database](https://img.shields.ly/badge/Database-MongoDB%20Atlas-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
+[![Vercel Deployment](https://img.shields.io/badge/Deployment-Live%20on%20Vercel-success?style=for-the-badge&logo=vercel&logoColor=white)](https://todolist-drab-tau.vercel.app/)
+[![React Version](https://img.shields.io/badge/Frontend-React%2019-61DAFB?style=for-the-badge&logo=react&logoColor=white)](https://react.dev/)
+[![Node Version](https://img.shields.io/badge/Backend-Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![Database](https://img.shields.io/badge/Database-MongoDB%20Atlas-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
 
 An ultra-premium, full-stack **MERN** (MongoDB, Express, React, Node) application featuring time-auditing tracking, team dashboards, kanban task workflows, analytics reports, and a custom **interactive developer portfolio** integration.
 
