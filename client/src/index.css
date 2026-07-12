@@ -84,6 +84,36 @@
 ═══════════════════════════════════════════════ */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* Custom scifi neon cursors globally */
+* {
+  cursor: url('/cursor-default.png') 2 2, auto !important;
+}
+
+/* Pointer cursor for interactive links/buttons (overrides * due to higher specificity) */
+a, a *, button, button *, select, option, [role="button"], [role="button"] *, input[type="submit"], input[type="button"], .portfolio-theme-dot, .portfolio-nav-dot, .project-flip-card, .social-icon-hover, .btn-bounce {
+  cursor: url('/cursor-pointer.png') 8 2, pointer !important;
+}
+
+/* Move cursor for drag-and-drop components / scroll areas */
+.draggable, .grab, .grabbing, [draggable="true"] {
+  cursor: url('/cursor-move.png') 14 16, move !important;
+}
+
+/* Text cursor for text input/textarea fields */
+input[type="text"], input[type="password"], input[type="email"], input[type="number"], textarea, input:not([type="submit"]):not([type="button"]), [contenteditable="true"] {
+  cursor: url('/cursor-text.png') 12 4, text !important;
+}
+
+/* Crosshair cursor for charts, visual analytics, canvas areas */
+canvas, .portfolio-particles-canvas, .apexcharts-canvas, .apexcharts-svg, svg, path {
+  cursor: url('/cursor-crosshair.png') 16 10, crosshair !important;
+}
+
+/* Help cursor for elements with helper/information text */
+[title], .help, [data-help] {
+  cursor: url('/cursor-help.png') 2 2, help !important;
+}
+
 html { font-size: 16px; scroll-behavior: smooth; }
 
 body {
@@ -97,7 +127,7 @@ body {
 }
 
 a { color: inherit; text-decoration: none; }
-button { cursor: pointer; font-family: var(--font); }
+button { font-family: var(--font); }
 input, textarea, select { font-family: var(--font); }
 img { max-width: 100%; }
 

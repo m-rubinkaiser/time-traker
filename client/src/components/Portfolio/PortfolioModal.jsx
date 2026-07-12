@@ -9,6 +9,8 @@ import {
 } from 'react-icons/md';
 import { FaLinkedin, FaGithub, FaEnvelope } from 'react-icons/fa';
 import './portfolio.css';
+import ThreeDBackground from './ThreeDBackground';
+import TiltContainer from './TiltContainer';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -53,6 +55,8 @@ export default function PortfolioModal({ isOpen, onClose }) {
   const [scrollProgress, setScrollProgress] = useState(0);
   const [activeSection, setActiveSection] = useState('home');
   const [counters, setCounters] = useState({ exp: 0, proj: 0, cert: 0 });
+  const [activeTheme, setActiveTheme] = useState('obsidian');
+  const [activeEffect, setActiveEffect] = useState('nature'); // 'nature', 'tech', 'particles', 'geometric', 'interactive', 'apple', 'classic'
 
   const typedRole = useTypingEffect([
     'Full Stack Developer',
@@ -70,9 +74,9 @@ export default function PortfolioModal({ isOpen, onClose }) {
     card.style.setProperty('--y', `${y}px`);
   };
 
-  // Particle Background
+  // 3D Particle Background
   useEffect(() => {
-    if (!isOpen || !canvasRef.current) return;
+    if (!isOpen || activeEffect !== 'classic' || !canvasRef.current) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     let animationFrameId;
@@ -84,58 +88,175 @@ export default function PortfolioModal({ isOpen, onClose }) {
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
 
-    const particles = [];
-    const particleCount = 60;
+    const points = [];
+    const pointCount = 90;
+    const fov = 400;
+    const sphereRadius = 240;
 
-    for (let i = 0; i < particleCount; i++) {
-      particles.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        radius: Math.random() * 2 + 1,
-        vx: (Math.random() - 0.5) * 0.5,
-        vy: (Math.random() - 0.5) * 0.5,
-        alpha: Math.random() * 0.6 + 0.2
+    for (let i = 0; i < pointCount; i++) {
+      const u = Math.random();
+      const v = Math.random();
+      const theta = u * 2.0 * Math.PI;
+      const phi = Math.acos(2.0 * v - 1.0);
+      
+      const x = sphereRadius * Math.sin(phi) * Math.cos(theta);
+      const y = sphereRadius * Math.sin(phi) * Math.sin(theta);
+      const z = sphereRadius * Math.cos(phi);
+
+      points.push({
+        x: x,
+        y: y,
+        z: z,
+        vx: (Math.random() - 0.5) * 0.1,
+        vy: (Math.random() - 0.5) * 0.1,
+        vz: (Math.random() - 0.5) * 0.1,
+        alpha: Math.random() * 0.5 + 0.4
       });
     }
 
     let mouse = { x: null, y: null };
+    let rotationSpeedY = 0.0015;
+    let rotationSpeedX = 0.0006;
+
     const handleMouseMove = (e) => {
       const rect = canvas.getBoundingClientRect();
-      mouse.x = e.clientX - rect.left;
-      mouse.y = e.clientY - rect.top;
+      const mX = e.clientX - rect.left;
+      const mY = e.clientY - rect.top;
+      mouse.x = mX;
+      mouse.y = mY;
+      
+      rotationSpeedY = (mX - canvas.width / 2) * 0.000008;
+      rotationSpeedX = (mY - canvas.height / 2) * 0.000008;
     };
     canvas.parentElement.addEventListener('mousemove', handleMouseMove);
 
+    const handleMouseLeave = () => {
+      mouse.x = null;
+      mouse.y = null;
+      rotationSpeedY = 0.0015;
+      rotationSpeedX = 0.0006;
+    };
+    canvas.parentElement.addEventListener('mouseleave', handleMouseLeave);
+
     const draw = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
       
-      for (let i = 0; i < particles.length; i++) {
-        const p1 = particles[i];
+      const rawAccent = getComputedStyle(canvas).getPropertyValue('--accent') || '#6366f1';
+      const accentColor = rawAccent.trim();
+
+      const cosY = Math.cos(rotationSpeedY);
+      const sinY = Math.sin(rotationSpeedY);
+      const cosX = Math.cos(rotationSpeedX);
+      const sinX = Math.sin(rotationSpeedX);
+
+      const projected = [];
+
+      for (let i = 0; i < points.length; i++) {
+        const p = points[i];
+
+        p.x += p.vx;
+        p.y += p.vy;
+        p.z += p.vz;
+
+        const currentDist = Math.sqrt(p.x * p.x + p.y * p.y + p.z * p.z);
+        if (currentDist > 0) {
+          p.x = (p.x / currentDist) * sphereRadius;
+          p.y = (p.y / currentDist) * sphereRadius;
+          p.z = (p.z / currentDist) * sphereRadius;
+        }
+
+        let x1 = p.x * cosY - p.z * sinY;
+        let z1 = p.z * cosY + p.x * sinY;
+
+        let y2 = p.y * cosX - z1 * sinX;
+        let z2 = z1 * cosX + p.y * sinX;
+
+        p.x = x1;
+        p.y = y2;
+        p.z = z2;
+
+        const zDepth = p.z + 400; 
+        if (zDepth <= 0) continue;
+
+        const scale = fov / zDepth;
+        let screenX = p.x * scale + centerX;
+        let screenY = p.y * scale + centerY;
+
+        if (mouse.x !== null && mouse.y !== null) {
+          const dx = mouse.x - screenX;
+          const dy = mouse.y - screenY;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 180) {
+            screenX += dx * 0.05;
+            screenY += dy * 0.05;
+          }
+        }
+
+        projected.push({
+          x: screenX,
+          y: screenY,
+          z: p.z,
+          alpha: p.alpha,
+          scale: scale
+        });
+      }
+
+      for (let i = 0; i < projected.length; i++) {
+        const p = projected[i];
+        const radius = Math.max(0.5, p.scale * 1.5);
+        const opacity = Math.min(1.0, Math.max(0.1, p.alpha * (p.z + sphereRadius) / (sphereRadius * 2)));
+
         ctx.beginPath();
-        ctx.arc(p1.x, p1.y, p1.radius, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(99, 102, 241, ${p1.alpha})`;
+        ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+        ctx.fillStyle = accentColor;
+        ctx.globalAlpha = opacity;
         ctx.fill();
+      }
 
-        p1.x += p1.vx;
-        p1.y += p1.vy;
+      ctx.globalAlpha = 1.0;
+      for (let i = 0; i < projected.length; i++) {
+        const p1 = projected[i];
+        for (let j = i + 1; j < projected.length; j++) {
+          const p2 = projected[j];
+          const dx = p1.x - p2.x;
+          const dy = p1.y - p2.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
 
-        if (p1.x < 0 || p1.x > canvas.width) p1.vx *= -1;
-        if (p1.y < 0 || p1.y > canvas.height) p1.vy *= -1;
+          if (dist < 110) {
+            const opacity = (1 - dist / 110) * 0.18 * Math.min(p1.scale, p2.scale) * 0.5;
+            if (opacity > 0) {
+              ctx.beginPath();
+              ctx.moveTo(p1.x, p1.y);
+              ctx.lineTo(p2.x, p2.y);
+              ctx.strokeStyle = accentColor;
+              ctx.globalAlpha = opacity;
+              ctx.lineWidth = 0.5;
+              ctx.stroke();
+            }
+          }
+        }
 
-        if (mouse.x && mouse.y) {
+        if (mouse.x !== null && mouse.y !== null) {
           const dx = p1.x - mouse.x;
           const dy = p1.y - mouse.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 130) {
-            ctx.beginPath();
-            ctx.moveTo(p1.x, p1.y);
-            ctx.lineTo(mouse.x, mouse.y);
-            ctx.strokeStyle = `rgba(99, 102, 241, ${(1 - dist / 130) * 0.2})`;
-            ctx.lineWidth = 0.8;
-            ctx.stroke();
+          if (dist < 140) {
+            const opacity = (1 - dist / 140) * 0.3 * p1.scale * 0.5;
+            if (opacity > 0) {
+              ctx.beginPath();
+              ctx.moveTo(p1.x, p1.y);
+              ctx.lineTo(mouse.x, mouse.y);
+              ctx.strokeStyle = accentColor;
+              ctx.globalAlpha = opacity;
+              ctx.lineWidth = 0.8;
+              ctx.stroke();
+            }
           }
         }
       }
+      ctx.globalAlpha = 1.0; 
 
       animationFrameId = requestAnimationFrame(draw);
     };
@@ -144,8 +265,12 @@ export default function PortfolioModal({ isOpen, onClose }) {
     return () => {
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener('resize', resizeCanvas);
+      if (canvas.parentElement) {
+        canvas.parentElement.removeEventListener('mousemove', handleMouseMove);
+        canvas.parentElement.removeEventListener('mouseleave', handleMouseLeave);
+      }
     };
-  }, [isOpen]);
+  }, [isOpen, activeEffect]);
 
   // Scroll Progress and Highlight Indicator
   useEffect(() => {
@@ -172,6 +297,8 @@ export default function PortfolioModal({ isOpen, onClose }) {
     };
 
     const handleGlobalMouseMove = (e) => {
+      if (window.innerWidth <= 768) return;
+
       if (cursorRef.current) {
         gsap.to(cursorRef.current, {
           x: e.clientX,
@@ -196,11 +323,12 @@ export default function PortfolioModal({ isOpen, onClose }) {
     };
 
     const handleMouseOver = (e) => {
-      if (e.target.closest('button, a, .portfolio-nav-dot, .project-flip-card, input, textarea, .social-icon-hover')) {
+      if (e.target.closest('button, a, .portfolio-nav-dot, .project-flip-card, input, textarea, .social-icon-hover, .portfolio-theme-dot')) {
         if (cursorRef.current) {
+          cursorRef.current.style.backgroundImage = "url('/cursor-pointer.png')";
           gsap.to(cursorRef.current, {
-            scale: 1.2,
-            rotate: -15,
+            scale: 1.25,
+            rotate: -10,
             duration: 0.2
           });
         }
@@ -208,8 +336,9 @@ export default function PortfolioModal({ isOpen, onClose }) {
     };
 
     const handleMouseOut = (e) => {
-      if (e.target.closest('button, a, .portfolio-nav-dot, .project-flip-card, input, textarea, .social-icon-hover')) {
+      if (e.target.closest('button, a, .portfolio-nav-dot, .project-flip-card, input, textarea, .social-icon-hover, .portfolio-theme-dot')) {
         if (cursorRef.current) {
+          cursorRef.current.style.backgroundImage = "url('/cursor-default.png')";
           gsap.to(cursorRef.current, {
             scale: 1,
             rotate: 0,
@@ -470,7 +599,7 @@ export default function PortfolioModal({ isOpen, onClose }) {
   };
 
   return (
-    <div className="portfolio-modal-overlay">
+    <div className={`portfolio-modal-overlay theme-${activeTheme}`}>
       {/* Scroll indicator */}
       <div className="portfolio-scroll-progress" style={{ width: `${scrollProgress}%` }} />
 
@@ -498,34 +627,35 @@ export default function PortfolioModal({ isOpen, onClose }) {
         />
       ))}
 
+
+
+
       {/* Close button */}
       <button className="portfolio-close-btn" onClick={onClose} title="Close Portfolio">
         <MdClose size={24} />
       </button>
 
-      {/* Side Dot Navigation */}
-      <div className="portfolio-nav">
-        {['home', 'about', 'skills', 'experience', 'projects', 'education', 'certifications', 'contact'].map((sec) => (
-          <div 
-            key={sec} 
-            className={`portfolio-nav-dot ${activeSection === sec ? 'active' : ''}`}
-            onClick={() => handleDotClick(sec)}
-            title={sec.toUpperCase()}
-          />
-        ))}
-      </div>
+
+      {/* 3D Persistent Fullscreen Canvas */}
+      <ThreeDBackground 
+        effectType={activeEffect} 
+        scrollProgress={scrollProgress} 
+        eventSource={containerRef} 
+      />
 
       <div className="portfolio-modal-container" ref={containerRef}>
         
         {/* Section 1: Home / Hero */}
         <section id="portfolio-home" className="portfolio-section" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', background: 'radial-gradient(circle at 80% 20%, rgba(99, 102, 241, 0.08) 0%, transparent 50%)' }}>
-          <canvas className="portfolio-particles-canvas" ref={canvasRef} />
+          {activeEffect === 'classic' && (
+            <canvas className="portfolio-particles-canvas" ref={canvasRef} />
+          )}
           
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 40, width: '100%', alignItems: 'center' }}>
             <div style={{ order: 2 }}>
-              <div className="hero-profile-zoom profile-float" style={{ width: 280, height: 280, margin: '0 auto', borderRadius: '50%', overflow: 'hidden', border: '4px solid var(--accent)', boxShadow: 'var(--shadow-accent)', background: 'var(--bg-surface)' }}>
+              <TiltContainer className="hero-profile-zoom profile-float" maxRotation={15} scale={1.04} style={{ width: 280, height: 280, margin: '0 auto', borderRadius: '50%', overflow: 'hidden', border: '4px solid var(--accent)', boxShadow: 'var(--shadow-accent)', background: 'var(--bg-surface)' }}>
                 <img src="/profile.jpg" alt="Rubin Kaiser" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              </div>
+              </TiltContainer>
             </div>
             
             <div style={{ order: 1 }}>
@@ -555,16 +685,33 @@ export default function PortfolioModal({ isOpen, onClose }) {
                 </button>
               </div>
 
-              <div className="hero-text-slide" style={{ display: 'flex', gap: 20, marginTop: 40 }}>
-                <a href="https://linkedin.com/in/rubin-kaiser-m-b605962b9" target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)', fontSize: 24, transition: 'var(--transition)' }} className="social-icon-hover">
-                  <FaLinkedin />
-                </a>
-                <a href="https://github.com/m-rubinkaiser" target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)', fontSize: 24, transition: 'var(--transition)' }} className="social-icon-hover">
-                  <FaGithub />
-                </a>
-                <a href="mailto:m.rubinkaiser@gmail.com" style={{ color: 'var(--text-muted)', fontSize: 24, transition: 'var(--transition)' }} className="social-icon-hover">
-                  <FaEnvelope />
-                </a>
+              <div className="hero-text-slide" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 32, marginTop: 40 }}>
+                <div style={{ display: 'flex', gap: 20 }}>
+                  <a href="https://linkedin.com/in/rubin-kaiser-m-b605962b9" target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)', fontSize: 24, transition: 'var(--transition)' }} className="social-icon-hover">
+                    <FaLinkedin />
+                  </a>
+                  <a href="https://github.com/m-rubinkaiser" target="_blank" rel="noreferrer" style={{ color: 'var(--text-muted)', fontSize: 24, transition: 'var(--transition)' }} className="social-icon-hover">
+                    <FaGithub />
+                  </a>
+                  <a href="mailto:m.rubinkaiser@gmail.com" style={{ color: 'var(--text-muted)', fontSize: 24, transition: 'var(--transition)' }} className="social-icon-hover">
+                    <FaEnvelope />
+                  </a>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 'var(--radius-full)', padding: '5px 12px' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600, letterSpacing: 0.5 }}>THEME Presets</span>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {['obsidian', 'cyan', 'emerald', 'gold'].map((theme) => (
+                      <div 
+                        key={theme}
+                        className={`portfolio-theme-dot theme-dot-${theme} ${activeTheme === theme ? 'active' : ''}`}
+                        onClick={() => setActiveTheme(theme)}
+                        style={{ width: 14, height: 14 }}
+                        title={`Switch to ${theme.toUpperCase()} theme`}
+                      />
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -575,7 +722,7 @@ export default function PortfolioModal({ isOpen, onClose }) {
           <h2 style={{ fontSize: '2.5rem', fontWeight: 800, textAlign: 'center', marginBottom: 60 }}>About Me</h2>
           
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 40 }}>
-            <div className="glass-card about-slide-left" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <TiltContainer className="glass-card about-slide-left" maxRotation={8} scale={1.02} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
               <h3 style={{ fontSize: '1.6rem', marginBottom: 16, color: 'var(--accent)' }}>Who I Am</h3>
               <p style={{ color: 'var(--text-secondary)', marginBottom: 20, fontSize: '1.05rem', lineHeight: 1.7 }}>
                 Hi, I'm **Rubin Kaiser M**, a Full Stack Developer specializing in Laravel, PHP, AngularJS, and React. 
@@ -585,21 +732,21 @@ export default function PortfolioModal({ isOpen, onClose }) {
               <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>
                 To leverage my engineering expertise in PHP, Laravel, and React to deliver clean, scalable interfaces, and drive customer-facing features in collaboration with forward-thinking engineering squads.
               </p>
-            </div>
+            </TiltContainer>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, alignItems: 'center' }}>
-              <div className="glass-card about-slide-left hover-glow" style={{ textAlign: 'center', padding: '24px 10px' }}>
+              <TiltContainer className="glass-card about-slide-left hover-glow" maxRotation={15} scale={1.05} style={{ textAlign: 'center', padding: '24px 10px' }}>
                 <h3 style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--accent)', margin: 0 }}>{counters.exp}+</h3>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: 8 }}>Years Experience</p>
-              </div>
-              <div className="glass-card about-slide-left hover-glow" style={{ textAlign: 'center', padding: '24px 10px' }}>
+              </TiltContainer>
+              <TiltContainer className="glass-card about-slide-left hover-glow" maxRotation={15} scale={1.05} style={{ textAlign: 'center', padding: '24px 10px' }}>
                 <h3 style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--purple)', margin: 0 }}>{counters.proj}+</h3>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: 8 }}>Projects Built</p>
-              </div>
-              <div className="glass-card about-slide-left hover-glow" style={{ textAlign: 'center', padding: '24px 10px' }}>
+              </TiltContainer>
+              <TiltContainer className="glass-card about-slide-left hover-glow" maxRotation={15} scale={1.05} style={{ textAlign: 'center', padding: '24px 10px' }}>
                 <h3 style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--orange)', margin: 0 }}>{counters.cert}+</h3>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: 8 }}>Certifications</p>
-              </div>
+              </TiltContainer>
             </div>
           </div>
         </section>
@@ -760,8 +907,10 @@ export default function PortfolioModal({ isOpen, onClose }) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24 }}>
             
             {/* Project 1: Weather Dashboard */}
-            <div 
+            <TiltContainer 
               className="project-flip-card project-card-scroll hover-glow"
+              maxRotation={15}
+              scale={1.04}
               onMouseMove={(e) => handleSpotlightMove(e, e.currentTarget)}
             >
               <div className="project-flip-inner">
@@ -784,11 +933,13 @@ export default function PortfolioModal({ isOpen, onClose }) {
                   </div>
                 </div>
               </div>
-            </div>
+            </TiltContainer>
 
             {/* Project 2: Recipe Hub */}
-            <div 
+            <TiltContainer 
               className="project-flip-card project-card-scroll hover-glow"
+              maxRotation={15}
+              scale={1.04}
               onMouseMove={(e) => handleSpotlightMove(e, e.currentTarget)}
             >
               <div className="project-flip-inner">
@@ -811,11 +962,13 @@ export default function PortfolioModal({ isOpen, onClose }) {
                   </div>
                 </div>
               </div>
-            </div>
+            </TiltContainer>
 
             {/* Project 3: Student Result Analysis */}
-            <div 
+            <TiltContainer 
               className="project-flip-card project-card-scroll hover-glow"
+              maxRotation={15}
+              scale={1.04}
               onMouseMove={(e) => handleSpotlightMove(e, e.currentTarget)}
             >
               <div className="project-flip-inner">
@@ -838,11 +991,13 @@ export default function PortfolioModal({ isOpen, onClose }) {
                   </div>
                 </div>
               </div>
-            </div>
+            </TiltContainer>
 
             {/* Project 4: E-Commerce Web */}
-            <div 
+            <TiltContainer 
               className="project-flip-card project-card-scroll hover-glow"
+              maxRotation={15}
+              scale={1.04}
               onMouseMove={(e) => handleSpotlightMove(e, e.currentTarget)}
             >
               <div className="project-flip-inner">
@@ -865,11 +1020,13 @@ export default function PortfolioModal({ isOpen, onClose }) {
                   </div>
                 </div>
               </div>
-            </div>
+            </TiltContainer>
 
             {/* Project 5: TimeTrack Application */}
-            <div 
+            <TiltContainer 
               className="project-flip-card project-card-scroll hover-glow"
+              maxRotation={15}
+              scale={1.04}
               onMouseMove={(e) => handleSpotlightMove(e, e.currentTarget)}
             >
               <div className="project-flip-inner">
@@ -892,7 +1049,7 @@ export default function PortfolioModal({ isOpen, onClose }) {
                   </div>
                 </div>
               </div>
-            </div>
+            </TiltContainer>
 
           </div>
         </section>

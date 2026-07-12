@@ -7,12 +7,14 @@ const { initScheduler } = require('./services/scheduler');
 const app = express();
 
 // Connect to MongoDB
-connectDB();
-
-// Initialize Daily Cron Scheduler locally (Vercel will use cron endpoint instead)
-if (process.env.NODE_ENV !== 'production') {
-  initScheduler();
-}
+connectDB().then(() => {
+  // Initialize Daily Cron Scheduler locally (Vercel will use cron endpoint instead)
+  if (process.env.NODE_ENV !== 'production') {
+    initScheduler();
+  }
+}).catch(err => {
+  console.error('Failed to initialize database or scheduler:', err.message);
+});
 
 // Middleware
 app.use(cors({
