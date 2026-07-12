@@ -63,11 +63,28 @@ const AdminRoute = ({ children }) => {
 };
 
 function App() {
-  const { theme } = useSettingsStore();
+  const { theme, accent } = useSettingsStore();
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
+
+  useEffect(() => {
+    const acc = localStorage.getItem('accent') || 'indigo';
+    const values = {
+      indigo: { accent: '#6366f1', hover: '#4f52d8', light: 'rgba(99, 102, 241, 0.15)', glow: 'rgba(99, 102, 241, 0.4)' },
+      purple: { accent: '#a855f7', hover: '#9333ea', light: 'rgba(168, 85, 247, 0.15)', glow: 'rgba(168, 85, 247, 0.4)' },
+      green: { accent: '#10b981', hover: '#059669', light: 'rgba(16, 185, 129, 0.15)', glow: 'rgba(16, 185, 129, 0.4)' },
+      orange: { accent: '#f97316', hover: '#ea580c', light: 'rgba(249, 115, 22, 0.15)', glow: 'rgba(249, 115, 22, 0.4)' },
+      cyan: { accent: '#06b6d4', hover: '#0891b2', light: 'rgba(6, 182, 212, 0.15)', glow: 'rgba(6, 182, 212, 0.4)' }
+    }[acc] || { accent: '#6366f1', hover: '#4f52d8', light: 'rgba(99, 102, 241, 0.15)', glow: 'rgba(99, 102, 241, 0.4)' };
+
+    const root = document.documentElement;
+    root.style.setProperty('--accent', values.accent);
+    root.style.setProperty('--accent-hover', values.hover);
+    root.style.setProperty('--accent-light', values.light);
+    root.style.setProperty('--accent-glow', values.glow);
+  }, [accent]);
 
   return (
     <BrowserRouter>

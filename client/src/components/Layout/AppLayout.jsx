@@ -20,8 +20,8 @@ export default function AppLayout() {
     <div className="app-layout">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       {sidebarOpen && (
-        <div 
-          className="sidebar-backdrop" 
+        <div
+          className="sidebar-backdrop"
           onClick={() => setSidebarOpen(false)}
           style={{
             position: 'fixed',
@@ -37,8 +37,8 @@ export default function AppLayout() {
         />
       )}
       <div className="main-content">
-        <Topbar 
-          onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} 
+        <Topbar
+          onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
           onTogglePortfolio={() => setPortfolioOpen(!portfolioOpen)}
         />
         <div className="page-wrapper" onClick={() => setSidebarOpen(false)}>

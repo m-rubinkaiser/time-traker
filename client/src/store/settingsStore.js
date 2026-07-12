@@ -3,6 +3,7 @@ import API from '../services/api';
 
 const useSettingsStore = create((set) => ({
   theme: localStorage.getItem('theme') || 'dark',
+  accent: localStorage.getItem('accent') || 'indigo',
   settings: null,
   loading: false,
 
@@ -10,6 +11,11 @@ const useSettingsStore = create((set) => ({
     localStorage.setItem('theme', theme);
     document.documentElement.setAttribute('data-theme', theme);
     set({ theme });
+  },
+
+  setAccent: (accent) => {
+    localStorage.setItem('accent', accent);
+    set({ accent });
   },
 
   fetchSettings: async () => {

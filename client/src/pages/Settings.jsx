@@ -115,7 +115,7 @@ function PasswordTab() {
 }
 
 function ThemeTab() {
-  const { theme, setTheme, settings, updateSettings } = useSettingsStore();
+  const { theme, setTheme, accent, setAccent, updateSettings } = useSettingsStore();
 
   const handleTheme = async (t) => {
     setTheme(t);
@@ -123,12 +123,25 @@ function ThemeTab() {
     toast.success(`${t === 'dark' ? 'Dark' : 'Light'} mode activated`);
   };
 
+  const handleAccent = (acc) => {
+    setAccent(acc);
+    toast.success(`${acc.charAt(0).toUpperCase() + acc.slice(1)} accent theme activated`);
+  };
+
+  const accentOptions = [
+    { id: 'indigo', label: 'Indigo', color: '#6366f1' },
+    { id: 'purple', label: 'Purple', color: '#a855f7' },
+    { id: 'green', label: 'Green', color: '#10b981' },
+    { id: 'orange', label: 'Orange', color: '#f97316' },
+    { id: 'cyan', label: 'Cyan', color: '#06b6d4' }
+  ];
+
   return (
     <div>
       <div className="settings-section-title">Appearance</div>
-      <div className="settings-section-desc">Choose your preferred theme</div>
+      <div className="settings-section-desc">Choose your preferred theme mode</div>
 
-      <div className="theme-toggle-wrap">
+      <div className="theme-toggle-wrap" style={{ marginBottom: 32 }}>
         <div className={`theme-option ${theme === 'dark' ? 'active' : ''}`} onClick={() => handleTheme('dark')}>
           <div className="theme-option-icon">🌙</div>
           <div className="theme-option-name">Dark Mode</div>
@@ -139,6 +152,33 @@ function ThemeTab() {
           <div className="theme-option-name">Light Mode</div>
           <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>Classic look</div>
         </div>
+      </div>
+
+      <div className="settings-section-title" style={{ marginTop: 24 }}>Accent Theme Color</div>
+      <div className="settings-section-desc">Customize accent highlights and button tones across the workspace</div>
+
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 16 }}>
+        {accentOptions.map((opt) => (
+          <div
+            key={opt.id}
+            onClick={() => handleAccent(opt.id)}
+            style={{
+              padding: '12px 20px',
+              borderRadius: 'var(--radius)',
+              border: `2px solid ${accent === opt.id ? 'var(--accent)' : 'var(--border)'}`,
+              background: accent === opt.id ? 'var(--accent-light)' : 'var(--bg-elevated)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              minWidth: 120,
+              transition: 'var(--transition)'
+            }}
+          >
+            <div style={{ width: 14, height: 14, borderRadius: '50%', background: opt.color }} />
+            <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-primary)' }}>{opt.label}</div>
+          </div>
+        ))}
       </div>
     </div>
   );
