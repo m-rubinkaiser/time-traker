@@ -350,9 +350,19 @@ function vociferTab() {
 }
 
 function DataManagementTab() {
+  const [activeSubTab, setActiveSubTab] = useState('projects'); // 'projects' | 'tasks'
   const [projects, setProjects] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Filters for projects
+  const [projectSearch, setProjectSearch] = useState('');
+  const [projectStatusFilter, setProjectStatusFilter] = useState('');
+
+  // Filters for tasks
+  const [taskSearch, setTaskSearch] = useState('');
+  const [taskProjectFilter, setTaskProjectFilter] = useState('');
+  const [taskStatusFilter, setTaskStatusFilter] = useState('');
 
   useEffect(() => {
     const load = async () => {
@@ -389,45 +399,167 @@ function DataManagementTab() {
     } catch { toast.error('Failed to delete task'); }
   };
 
+  const filteredProjects = projects.filter(p => {
+    const matchesSearch = !projectSearch || 
+      (p.name || '').toLowerCase().includes(projectSearch.toLowerCase()) || 
+      (p.client || '').toLowerCase().includes(projectSearch.toLowerCase());
+    const matchesStatus = !projectStatusFilter || p.status === projectStatusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const filteredTasks = tasks.filter(t => {
+    const matchesSearch = !taskSearch || 
+      (t.title || '').toLowerCase().includes(taskSearch.toLowerCase()) || 
+      (t.taskNumber || '').toLowerCase().includes(taskSearch.toLowerCase());
+    
+    let matchesProject = true;
+    if (taskProjectFilter === 'no-project') {
+      matchesProject = !t.projectId || !t.projectId._id;
+    } else if (taskProjectFilter) {
+      matchesProject = (t.projectId?._id || t.projectId) === taskProjectFilter;
+    }
+
+    const matchesStatus = !taskStatusFilter || t.status === taskStatusFilter;
+
+    return matchesSearch && matchesProject && matchesStatus;
+  });
+
   if (loading) return <div className="loading-overlay"><span className="spinner" /></div>;
 
   return (
     <div>
       <div className="settings-section-title">Data Management</div>
-      <div className="settings-section-desc">Permanently delete your projects and tasks</div>
+      <div className="settings-section-desc">Manage and permanently delete your projects and tasks</div>
 
-      <div style={{ marginTop: 24 }}>
-        <h4 style={{ marginBottom: 12, borderBottom: '1px solid var(--border)', paddingBottom: 8 }}>Projects ({projects.length})</h4>
-        {projects.length === 0 ? <div className="text-muted">No projects found.</div> : (
-          <div style={{ display: 'grid', gap: 8, maxHeight: 300, overflowY: 'auto', marginBottom: 32 }}>
-            {projects.map(p => (
-              <div key={p._id} style={{ display: 'flex', justifyContent: 'space-between', padding: 12, background: 'var(--bg-elevated)', borderRadius: 8 }}>
-                <div><strong>{p.name}</strong> <span className="text-muted text-sm ml-2">({p.status})</span></div>
-                <button className="btn btn-danger btn-sm" onClick={() => deleteProject(p._id)}>
-                  <MdDelete /> Delete
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <h4 style={{ marginBottom: 12, borderBottom: '1px solid var(--border)', paddingBottom: 8 }}>Tasks ({tasks.length})</h4>
-        {tasks.length === 0 ? <div className="text-muted">No tasks found.</div> : (
-          <div style={{ display: 'grid', gap: 8, maxHeight: 400, overflowY: 'auto' }}>
-            {tasks.map(t => (
-              <div key={t._id} style={{ display: 'flex', justifyContent: 'space-between', padding: 12, background: 'var(--bg-elevated)', borderRadius: 8 }}>
-                <div>
-                  <strong>{t.title}</strong>
-                  <div className="text-muted text-sm">{t.projectId?.name || 'Unknown Project'} - {t.status}</div>
-                </div>
-                <button className="btn btn-danger btn-sm" onClick={() => deleteTask(t._id)}>
-                  <MdDelete /> Delete
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+      {/* Sub-tab navigation */}
+      <div style={{ display: 'flex', gap: 8, marginTop: 20, marginBottom: 20 }}>
+        <button
+          className={`filter-chip ${activeSubTab === 'projects' ? 'active' : ''}`}
+          onClick={() => setActiveSubTab('projects')}
+          style={{ padding: '8px 18px', fontSize: 13, fontWeight: 600 }}
+        >
+          📁 Projects ({filteredProjects.length})
+        </button>
+        <button
+          className={`filter-chip ${activeSubTab === 'tasks' ? 'active' : ''}`}
+          onClick={() => setActiveSubTab('tasks')}
+          style={{ padding: '8px 18px', fontSize: 13, fontWeight: 600 }}
+        >
+          📋 Tasks ({filteredTasks.length})
+        </button>
       </div>
+
+      {activeSubTab === 'projects' && (
+        <div>
+          {/* Projects filter bar */}
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
+            <input
+              className="filter-select"
+              placeholder="Search projects..."
+              value={projectSearch}
+              onChange={e => setProjectSearch(e.target.value)}
+              style={{ minWidth: 200, flex: 1 }}
+            />
+            <select
+              className="filter-select"
+              value={projectStatusFilter}
+              onChange={e => setProjectStatusFilter(e.target.value)}
+            >
+              <option value="">All Statuses</option>
+              <option value="active">Active</option>
+              <option value="completed">Completed</option>
+              <option value="archived">Archived</option>
+            </select>
+          </div>
+
+          {filteredProjects.length === 0 ? (
+            <div className="empty-state" style={{ padding: 32 }}>No matching projects found.</div>
+          ) : (
+            <div style={{ display: 'grid', gap: 8, maxHeight: 450, overflowY: 'auto' }}>
+              {filteredProjects.map(p => (
+                <div key={p._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 14, background: 'var(--bg-elevated)', borderRadius: 8, border: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span className="color-dot" style={{ background: p.color || 'var(--accent)' }} />
+                    <div>
+                      <div style={{ fontWeight: 600 }}>{p.name} {p.client ? `(${p.client})` : ''}</div>
+                      <div className="text-muted text-xs">Status: {p.status}</div>
+                    </div>
+                  </div>
+                  <button className="btn btn-danger btn-sm" onClick={() => deleteProject(p._id)}>
+                    <MdDelete /> Delete
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeSubTab === 'tasks' && (
+        <div>
+          {/* Tasks filter bar */}
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
+            <input
+              className="filter-select"
+              placeholder="Search task title or number..."
+              value={taskSearch}
+              onChange={e => setTaskSearch(e.target.value)}
+              style={{ minWidth: 180, flex: 1 }}
+            />
+            <select
+              className="filter-select"
+              value={taskProjectFilter}
+              onChange={e => setTaskProjectFilter(e.target.value)}
+            >
+              <option value="">All Projects</option>
+              <option value="no-project">No Project (Unassigned)</option>
+              {projects.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
+            </select>
+            <select
+              className="filter-select"
+              value={taskStatusFilter}
+              onChange={e => setTaskStatusFilter(e.target.value)}
+            >
+              <option value="">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="in-progress">In Progress</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+
+          {filteredTasks.length === 0 ? (
+            <div className="empty-state" style={{ padding: 32 }}>No matching tasks found.</div>
+          ) : (
+            <div style={{ display: 'grid', gap: 8, maxHeight: 450, overflowY: 'auto' }}>
+              {filteredTasks.map(t => (
+                <div key={t._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 12, background: 'var(--bg-elevated)', borderRadius: 8, border: '1px solid var(--border)' }}>
+                  <div>
+                    <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {t.taskNumber && (
+                        <span className="badge" style={{ background: 'var(--bg-base)', border: '1px solid var(--border)', fontSize: 11 }}>
+                          {t.taskNumber}
+                        </span>
+                      )}
+                      {t.title}
+                    </div>
+                    <div className="text-muted text-xs" style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span>Project: <strong>{t.projectId?.name || 'No Project'}</strong></span>
+                      <span>·</span>
+                      <span>Status: {t.status}</span>
+                      <span>·</span>
+                      <span>Priority: {t.priority}</span>
+                    </div>
+                  </div>
+                  <button className="btn btn-danger btn-sm" onClick={() => deleteTask(t._id)}>
+                    <MdDelete /> Delete
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

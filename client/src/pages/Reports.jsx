@@ -14,12 +14,74 @@ export default function Reports({ tab: defaultTab }) {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  const formatYMD = (d) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const getInitialDates = () => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    return { startDate: formatYMD(start), endDate: formatYMD(end) };
+  };
+
   // Filters
-  const [filter, setFilter] = useState({ type: 'month', year: CURRENT_YEAR, month: new Date().getMonth() + 1, projectId: '', status: '', startDate: '', endDate: '' });
+  const [filter, setFilter] = useState(() => ({
+    type: 'this-month',
+    year: CURRENT_YEAR,
+    month: new Date().getMonth() + 1,
+    projectId: '',
+    status: '',
+    ...getInitialDates()
+  }));
 
   useEffect(() => {
     API.get('/projects').then(r => setProjects(r.data)).catch(() => {});
   }, []);
+
+  const handlePresetChange = (preset) => {
+    const now = new Date();
+    let startDate = '';
+    let endDate = '';
+
+    if (preset === 'today') {
+      startDate = formatYMD(now);
+      endDate = formatYMD(now);
+    } else if (preset === 'yesterday') {
+      const y = new Date(now);
+      y.setDate(now.getDate() - 1);
+      startDate = formatYMD(y);
+      endDate = formatYMD(y);
+    } else if (preset === 'this-month') {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      startDate = formatYMD(start);
+      endDate = formatYMD(end);
+    } else if (preset === 'last-month') {
+      const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const end = new Date(now.getFullYear(), now.getMonth(), 0);
+      startDate = formatYMD(start);
+      endDate = formatYMD(end);
+    } else if (preset === 'this-year') {
+      const start = new Date(now.getFullYear(), 0, 1);
+      const end = new Date(now.getFullYear(), 11, 31);
+      startDate = formatYMD(start);
+      endDate = formatYMD(end);
+    } else if (preset === 'custom') {
+      startDate = filter.startDate || formatYMD(now);
+      endDate = filter.endDate || formatYMD(now);
+    }
+
+    setFilter(p => ({
+      ...p,
+      type: preset,
+      startDate,
+      endDate
+    }));
+  };
 
   const loadReport = async () => {
     setLoading(true);
@@ -50,7 +112,7 @@ export default function Reports({ tab: defaultTab }) {
     try {
       const params = new URLSearchParams({
         filter: filter.type, year: filter.year, month: filter.month,
-        format, startDate: filter.startDate, endDate: filter.endDate
+        format, startDate: filter.startDate, endDate: filter.endDate, projectId: filter.projectId
       });
       const resp = await API.get(`/reports/export?${params}`, { responseType: 'blob' });
       const url = window.URL.createObjectURL(new Blob([resp.data]));
@@ -99,46 +161,35 @@ export default function Reports({ tab: defaultTab }) {
       <div className="filters-bar" style={{ flexWrap: 'wrap', gap: 12 }}>
         <div className="filter-group">
           <span className="filter-label">Period:</span>
-          {['day', 'week', 'month', 'year'].map(f => (
-            <button key={f} className={`filter-chip ${filter.type === f ? 'active' : ''}`}
-              onClick={() => setFilter(p => ({ ...p, type: f }))}>
-              {f.charAt(0).toUpperCase() + f.slice(1)}
-            </button>
-          ))}
-        </div>
-
-        <div className="filter-group">
-          <span className="filter-label">Year:</span>
-          <select className="filter-select" value={filter.year}
-            onChange={e => setFilter(p => ({ ...p, year: e.target.value }))}>
-            {YEARS.map(y => <option key={y}>{y}</option>)}
+          <select className="filter-select" value={filter.type} onChange={e => handlePresetChange(e.target.value)}>
+            <option value="today">Today</option>
+            <option value="yesterday">Yesterday</option>
+            <option value="this-month">This Month</option>
+            <option value="last-month">Last Month</option>
+            <option value="this-year">This Year</option>
+            <option value="custom">Custom Range</option>
           </select>
         </div>
 
-        <div className="filter-group">
-          <span className="filter-label">Month:</span>
-          <select className="filter-select" value={filter.month}
-            onChange={e => setFilter(p => ({ ...p, month: e.target.value }))}>
-            {MONTH_NAMES.map((m, i) => <option key={i+1} value={i+1}>{m}</option>)}
-          </select>
-        </div>
+        {filter.type === 'custom' && (
+          <div className="filter-group" style={{ gap: 6 }}>
+            <span className="filter-label">From:</span>
+            <input className="filter-select" type="date" value={filter.startDate}
+              onChange={e => setFilter(p => ({ ...p, startDate: e.target.value }))} />
+            <span className="filter-label">To:</span>
+            <input className="filter-select" type="date" value={filter.endDate}
+              onChange={e => setFilter(p => ({ ...p, endDate: e.target.value }))} />
+          </div>
+        )}
 
         <div className="filter-group">
           <span className="filter-label">Project:</span>
           <select className="filter-select" value={filter.projectId}
             onChange={e => setFilter(p => ({ ...p, projectId: e.target.value }))}>
-            <option value="">All</option>
+            <option value="">All Projects</option>
+            <option value="no-project">No Project (Unassigned)</option>
             {projects.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
           </select>
-        </div>
-
-        <div className="filter-group" style={{ gap: 4 }}>
-          <span className="filter-label">Custom Range:</span>
-          <input className="filter-select" type="date" value={filter.startDate}
-            onChange={e => setFilter(p => ({ ...p, startDate: e.target.value }))} />
-          <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>to</span>
-          <input className="filter-select" type="date" value={filter.endDate}
-            onChange={e => setFilter(p => ({ ...p, endDate: e.target.value }))} />
         </div>
       </div>
 

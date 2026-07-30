@@ -3,43 +3,67 @@ const Task = require('../models/Task');
 const Project = require('../models/Project');
 const ExcelJS = require('exceljs');
 
-const getDateRange = (filter, year, month) => {
+const parseDateRange = (query) => {
+  const { filter, startDate, endDate, year, month } = query;
+  
+  if (startDate && endDate) {
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+    return { start, end, dateQuery: { $gte: start, $lte: end } };
+  }
+
   const now = new Date();
   let start, end;
 
   switch (filter) {
+    case 'today':
     case 'day':
-      start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      end = new Date(start.getTime() + 86400000);
+      start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+      end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
       break;
+    case 'yesterday': {
+      const y = new Date(now);
+      y.setDate(now.getDate() - 1);
+      start = new Date(y.getFullYear(), y.getMonth(), y.getDate(), 0, 0, 0, 0);
+      end = new Date(y.getFullYear(), y.getMonth(), y.getDate(), 23, 59, 59, 999);
+      break;
+    }
     case 'week': {
       const dow = now.getDay() || 7;
       start = new Date(now); start.setDate(now.getDate() - dow + 1); start.setHours(0,0,0,0);
-      end = new Date(start); end.setDate(start.getDate() + 7);
+      end = new Date(start); end.setDate(start.getDate() + 6); end.setHours(23,59,59,999);
       break;
     }
+    case 'last-month':
+      start = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
+      end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+      break;
+    case 'this-month':
     case 'month':
-      start = new Date(now.getFullYear(), now.getMonth(), 1);
-      end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      if (year && month) {
+        start = new Date(parseInt(year), parseInt(month) - 1, 1, 0, 0, 0, 0);
+        end = new Date(parseInt(year), parseInt(month), 0, 23, 59, 59, 999);
+      } else {
+        start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+        end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+      }
       break;
-    case 'year':
-      start = new Date(now.getFullYear(), 0, 1);
-      end = new Date(now.getFullYear() + 1, 0, 1);
+    case 'this-year':
+    case 'year': {
+      const yVal = year ? parseInt(year) : now.getFullYear();
+      start = new Date(yVal, 0, 1, 0, 0, 0, 0);
+      end = new Date(yVal, 11, 31, 23, 59, 59, 999);
       break;
+    }
     default:
-      start = new Date(2000, 0, 1);
-      end = new Date(now.getFullYear() + 1, 0, 1);
+      start = new Date(2000, 0, 1, 0, 0, 0, 0);
+      end = new Date(now.getFullYear() + 5, 11, 31, 23, 59, 59, 999);
+      break;
   }
 
-  if (year && month) {
-    start = new Date(parseInt(year), parseInt(month) - 1, 1);
-    end = new Date(parseInt(year), parseInt(month), 1);
-  } else if (year) {
-    start = new Date(parseInt(year), 0, 1);
-    end = new Date(parseInt(year) + 1, 0, 1);
-  }
-
-  return { start, end };
+  return { start, end, dateQuery: { $gte: start, $lte: end } };
 };
 
 // @desc Daily report
@@ -47,18 +71,15 @@ const getDateRange = (filter, year, month) => {
 const getDailyReport = async (req, res) => {
   try {
     const userId = req.user._id;
-    const { filter, year, month, projectId, taskId, status, startDate, endDate } = req.query;
-
-    let dateQuery;
-    if (startDate && endDate) {
-      dateQuery = { $gte: new Date(startDate), $lte: new Date(endDate) };
-    } else {
-      const { start, end } = getDateRange(filter || 'month', year, month);
-      dateQuery = { $gte: start, $lt: end };
-    }
+    const { projectId, taskId, status } = req.query;
+    const { dateQuery } = parseDateRange(req.query);
 
     const query = { userId, date: dateQuery };
-    if (projectId) query.projectId = projectId;
+    if (projectId === 'no-project' || projectId === 'null') {
+      query.$or = [{ projectId: null }, { projectId: { $exists: false } }];
+    } else if (projectId) {
+      query.projectId = projectId;
+    }
     if (taskId) query.taskId = taskId;
 
     let entries = await TimeEntry.find(query)
@@ -81,18 +102,15 @@ const getDailyReport = async (req, res) => {
 const getMonthlyReport = async (req, res) => {
   try {
     const userId = req.user._id;
-    const { year, month, projectId, filter, startDate, endDate } = req.query;
-    
-    let dateQuery;
-    if (startDate && endDate) {
-      dateQuery = { $gte: new Date(startDate), $lte: new Date(endDate) };
-    } else {
-      const { start, end } = getDateRange(filter || 'month', year, month);
-      dateQuery = { $gte: start, $lt: end };
-    }
+    const { projectId } = req.query;
+    const { dateQuery } = parseDateRange(req.query);
 
     const query = { userId, date: dateQuery };
-    if (projectId) query.projectId = projectId;
+    if (projectId === 'no-project' || projectId === 'null') {
+      query.$or = [{ projectId: null }, { projectId: { $exists: false } }];
+    } else if (projectId) {
+      query.projectId = projectId;
+    }
 
     const entries = await TimeEntry.find(query)
       .populate('projectId', 'name color')
@@ -128,9 +146,9 @@ const getMonthlyReport = async (req, res) => {
 const getProjectReport = async (req, res) => {
   try {
     const userId = req.user._id;
-    const { projectId, filter, year, month } = req.query;
+    const { projectId } = req.query;
+    const { start, end } = parseDateRange(req.query);
 
-    const { start, end } = getDateRange(filter || 'all', year, month);
     const query = { userId };
     if (projectId) query.projectId = projectId;
 
@@ -141,7 +159,7 @@ const getProjectReport = async (req, res) => {
     const result = await Promise.all(
       projects.map(async (p) => {
         const tasks = await Task.find({ projectId: p._id, userId });
-        const entries = await TimeEntry.find({ projectId: p._id, userId, date: { $gte: start, $lt: end } });
+        const entries = await TimeEntry.find({ projectId: p._id, userId, date: { $gte: start, $lte: end } });
 
         return {
           project: { _id: p._id, name: p.name, color: p.color, status: p.status },
@@ -164,13 +182,9 @@ const getProjectReport = async (req, res) => {
 const exportReport = async (req, res) => {
   try {
     const userId = req.user._id;
-    const { type, format, filter, year, month, startDate, endDate } = req.query;
+    const { dateQuery } = parseDateRange(req.query);
 
-    const { start, end } = startDate && endDate
-      ? { start: new Date(startDate), end: new Date(endDate) }
-      : getDateRange(filter || 'month', year, month);
-
-    const entries = await TimeEntry.find({ userId, date: { $gte: start, $lt: end } })
+    const entries = await TimeEntry.find({ userId, date: dateQuery })
       .populate('taskId', 'title status priority')
       .populate('projectId', 'name')
       .sort({ date: 1 });
