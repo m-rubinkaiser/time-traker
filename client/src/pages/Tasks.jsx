@@ -15,6 +15,68 @@ const STATUS_CONFIG = [
 ];
 const STATUS_OPTIONS = STATUS_CONFIG.map(s => s.id);
 
+function NewTaskModal({ dateFilter, onClose, onSave, onSaveAndStart }) {
+  const [title, setTitle] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const handleAction = async (startTimer = false) => {
+    setSaving(true);
+    try {
+      const payload = { title: title.trim() || undefined };
+      if (dateFilter) {
+        payload.createdAt = new Date(dateFilter).toISOString();
+      }
+      const { data } = await API.post('/tasks', payload);
+      toast.success(`Task ${data.taskNumber || data.title} created!`);
+      if (startTimer) {
+        onSaveAndStart(data);
+      } else {
+        onSave(data);
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to create task');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal animate-in" onClick={e => e.stopPropagation()} style={{ maxWidth: 460 }}>
+        <div className="modal-header">
+          <div className="modal-title">New Task</div>
+          <button className="btn btn-ghost btn-icon btn-sm" onClick={onClose}>✕</button>
+        </div>
+        <form onSubmit={(e) => { e.preventDefault(); handleAction(false); }}>
+          <div className="modal-body">
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Task Name</label>
+              <input
+                className="form-control"
+                placeholder="Enter task name... (Optional)"
+                value={title}
+                onChange={e => setTitle(e.target.value)}
+                autoFocus
+              />
+            </div>
+          </div>
+          <div className="modal-footer" style={{ justifyContent: 'space-between' }}>
+            <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button type="submit" className="btn btn-secondary" disabled={saving}>
+                Save
+              </button>
+              <button type="button" className="btn btn-primary" disabled={saving} onClick={() => handleAction(true)}>
+                <MdPlayArrow /> Save & Start Timing
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function TaskModal({ task, projects, dateFilter, vociferEmployees = [], onClose, onSave }) {
   const [form, setForm] = useState({
     projectId: task?.projectId?._id || task?.projectId || '',
@@ -62,7 +124,7 @@ function TaskModal({ task, projects, dateFilter, vociferEmployees = [], onClose,
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal animate-in" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <div className="modal-title">{task ? 'Edit Task' : 'Add New Task'}</div>
+          <div className="modal-title">{task ? `Edit Task ${task.taskNumber ? `(${task.taskNumber})` : ''}` : 'Add New Task'}</div>
           <button className="btn btn-ghost btn-icon btn-sm" onClick={onClose}>✕</button>
         </div>
         <form onSubmit={handleSubmit}>
@@ -126,7 +188,7 @@ function TaskModal({ task, projects, dateFilter, vociferEmployees = [], onClose,
             <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
             <button type="submit" className="btn btn-primary" disabled={saving}>
               {saving ? <span className="spinner" /> : null}
-              {task ? 'Update' : 'Add Task'}
+              {task ? 'Update Task' : 'Add Task'}
             </button>
           </div>
         </form>
@@ -146,7 +208,7 @@ export default function Tasks() {
   const [statusFilter, setStatusFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
   const [dateFilter, setDateFilter] = useState(todayIso());
-  const [modal, setModal] = useState(null);
+  const [modal, setModal] = useState(null); // 'create' | 'edit' | 'manual'
   const [selected, setSelected] = useState(null);
 
   const fetchData = async () => {
@@ -190,18 +252,15 @@ export default function Tasks() {
     setDateFilter(d.toISOString().split('T')[0]);
   };
 
-  const handleCreateTask = async () => {
-    try {
-      const payload = {};
-      if (dateFilter) {
-        payload.createdAt = new Date(dateFilter).toISOString();
-      }
-      const { data } = await API.post('/tasks', payload);
-      setTasks(prev => [data, ...prev]);
-      toast.success(`Task ${data.taskNumber || data.title} created!`);
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to create task');
-    }
+  const handleSaveNewTask = (task) => {
+    setTasks(p => [task, ...p]);
+    setModal(null);
+  };
+
+  const handleSaveAndStartTask = (task) => {
+    setTasks(p => [task, ...p]);
+    setModal(null);
+    timer.start(task);
   };
 
   const handleSave = (task, isEdit) => {
@@ -249,7 +308,7 @@ export default function Tasks() {
         <div>
           <div className="page-title">Tasks</div>
         </div>
-        <button className="btn btn-primary" onClick={handleCreateTask}>
+        <button className="btn btn-primary" onClick={() => { setSelected(null); setModal('create'); }}>
           <MdAdd /> New
         </button>
       </div>
@@ -284,7 +343,8 @@ export default function Tasks() {
         <div className="filter-group">
           <span className="filter-label">Project:</span>
           <select className="filter-select" value={projectFilter} onChange={e => setProjectFilter(e.target.value)}>
-            <option value="">All</option>
+            <option value="">All Projects</option>
+            <option value="no-project">No Project (Unassigned)</option>
             {projects.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
           </select>
         </div>
@@ -323,8 +383,8 @@ export default function Tasks() {
         <div className="empty-state">
           <div className="empty-icon">📋</div>
           <div className="empty-title">No tasks found</div>
-          <div className="empty-desc">Click New to automatically create your first task</div>
-          <button className="btn btn-primary" onClick={handleCreateTask}>
+          <div className="empty-desc">Click New to create your task</div>
+          <button className="btn btn-primary" onClick={() => { setSelected(null); setModal('create'); }}>
             <MdAdd /> New
           </button>
         </div>
@@ -386,7 +446,7 @@ export default function Tasks() {
                     <MdTimer size={15} />
                   </button>
                   <button className="btn btn-ghost btn-icon btn-sm" title="Edit task"
-                    onClick={() => { setSelected(task); setModal('task'); }}>
+                    onClick={() => { setSelected(task); setModal('edit'); }}>
                     <MdEdit size={15} />
                   </button>
                 </div>
@@ -396,8 +456,23 @@ export default function Tasks() {
         </div>
       )}
 
-      {modal === 'task' && (
-        <TaskModal task={selected} projects={projects} dateFilter={dateFilter} vociferEmployees={vociferEmployees} onClose={() => setModal(null)} onSave={handleSave} />
+      {modal === 'create' && (
+        <NewTaskModal
+          dateFilter={dateFilter}
+          onClose={() => setModal(null)}
+          onSave={handleSaveNewTask}
+          onSaveAndStart={handleSaveAndStartTask}
+        />
+      )}
+      {modal === 'edit' && selected && (
+        <TaskModal
+          task={selected}
+          projects={projects}
+          dateFilter={dateFilter}
+          vociferEmployees={vociferEmployees}
+          onClose={() => setModal(null)}
+          onSave={handleSave}
+        />
       )}
       {modal === 'manual' && selected && (
         <ManualEntryModal

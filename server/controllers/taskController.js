@@ -22,7 +22,14 @@ const getTasks = async (req, res) => {
   try {
     const { projectId, status, priority, search, date } = req.query;
     const query = { userId: req.user._id };
-    if (projectId) query.projectId = projectId;
+    if (projectId === 'no-project' || projectId === 'null') {
+      query.$or = [
+        { projectId: null },
+        { projectId: { $exists: false } }
+      ];
+    } else if (projectId) {
+      query.projectId = projectId;
+    }
     if (status) query.status = status;
     if (priority) query.priority = priority;
     if (search) query.title = { $regex: search, $options: 'i' };
