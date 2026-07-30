@@ -15,8 +15,11 @@ API.interceptors.request.use((config) => {
 API.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401) {
-      console.error('API 401 Error on:', err.config?.url, err.response?.data);
+    const url = err.config?.url || '';
+    const isAuthRoute = url.includes('/auth/login') || url.includes('/auth/register');
+
+    if (err.response?.status === 401 && !isAuthRoute) {
+      console.error('API 401 Error on:', url, err.response?.data);
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       // Delay redirect slightly so user can read the toast/console
