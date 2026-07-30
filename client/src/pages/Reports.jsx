@@ -8,6 +8,8 @@ const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct'
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = [CURRENT_YEAR - 2, CURRENT_YEAR - 1, CURRENT_YEAR, CURRENT_YEAR + 1];
 
+const reportCache = {};
+
 export default function Reports({ tab: defaultTab }) {
   const [tab, setTab] = useState(defaultTab || 'daily');
   const [projects, setProjects] = useState([]);
@@ -84,6 +86,28 @@ export default function Reports({ tab: defaultTab }) {
   };
 
   const loadReport = async () => {
+    const cacheKey = `${tab}_${filter.type}_${filter.projectId}_${filter.startDate}_${filter.endDate}`;
+    if (reportCache[cacheKey]) {
+      setData(reportCache[cacheKey]);
+      setLoading(false);
+      const params = {
+        filter: filter.type,
+        year: filter.year,
+        month: filter.month,
+        projectId: filter.projectId,
+        status: filter.status,
+        startDate: filter.startDate,
+        endDate: filter.endDate,
+      };
+      const endpoint = tab === 'daily' ? '/reports/daily' :
+                       tab === 'monthly' ? '/reports/monthly' : '/reports/project';
+      API.get(endpoint, { params }).then(({ data: res }) => {
+        reportCache[cacheKey] = res;
+        setData(res);
+      }).catch(() => {});
+      return;
+    }
+
     setLoading(true);
     try {
       const params = {
@@ -98,6 +122,7 @@ export default function Reports({ tab: defaultTab }) {
       const endpoint = tab === 'daily' ? '/reports/daily' :
                        tab === 'monthly' ? '/reports/monthly' : '/reports/project';
       const { data: res } = await API.get(endpoint, { params });
+      reportCache[cacheKey] = res;
       setData(res);
     } catch {
       toast.error('Failed to load report');

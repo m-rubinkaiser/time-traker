@@ -2,20 +2,18 @@ import { useEffect, useState, useRef } from 'react';
 import { MdPlayArrow, MdPause, MdStop, MdAdd, MdEdit, MdDelete, MdTimer } from 'react-icons/md';
 import API from '../services/api';
 import { formatTimer, formatDuration, formatDate, formatDateShort, timeToDuration, todayIso } from '../utils/formatters';
-import toast from 'react-hot-toast';
-
 import useTimerStore from '../store/timerStore';
 import useTaskStore from '../store/taskStore';
 import useProjectStore from '../store/projectStore';
+import useTimeEntryStore from '../store/timeEntryStore';
 import ManualEntryModal from '../components/ManualEntryModal';
 
 export default function TimeTracking() {
   const timer = useTimerStore();
   const { tasks, fetchTasks } = useTaskStore();
   const { projects, fetchProjects } = useProjectStore();
-  const [entries, setEntries] = useState([]);
+  const { entries, loading: entriesLoading, fetchEntries, setEntries, addEntry, updateEntryInStore, removeEntryFromStore } = useTimeEntryStore();
   const [activeTask, setActiveTask] = useState('');
-  const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null);
   const [editEntry, setEditEntry] = useState(null);
   const [search, setSearch] = useState('');
@@ -58,40 +56,20 @@ export default function TimeTracking() {
 
     if (successCount > 0) {
       toast.success(`Successfully synced ${successCount} offline entries!`);
-      setEntries(prev => prev.map(e => syncedDataMap[e._id] ? syncedDataMap[e._id] : e));
+      fetchEntries(true);
     }
   };
 
   useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      try {
-        const [entriesRes] = await Promise.all([
-          API.get('/time-entries'),
-          fetchTasks(),
-          fetchProjects()
-        ]);
-        
-        // Merge offline pending entries so they display in UI logs
-        const pending = JSON.parse(localStorage.getItem('unsynced_time_entries') || '[]');
-        setEntries([...pending, ...entriesRes.data]);
-
-        if (pending.length > 0 && window.navigator.onLine) {
-          setTimeout(syncOfflineEntries, 500);
-        }
-      } catch {
-        toast.error('Failed to load data');
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
+    fetchTasks();
+    fetchProjects();
+    fetchEntries();
 
     window.addEventListener('online', syncOfflineEntries);
     return () => {
       window.removeEventListener('online', syncOfflineEntries);
     };
-  }, []);
+  }, [fetchTasks, fetchProjects, fetchEntries]);
 
   const filteredEntries = entries.filter(e => {
     const matchesSearch = !search || 
@@ -276,7 +254,7 @@ export default function TimeTracking() {
               </select>
             </div>
 
-            {loading ? (
+            {entriesLoading ? (
               <div className="loading-overlay" style={{ padding: 40 }}><span className="spinner" /></div>
             ) : filteredEntries.length === 0 ? (
               <div className="empty-state" style={{ padding: 40 }}>
