@@ -13,4 +13,8 @@ const timeEntrySchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+timeEntrySchema.index({ userId: 1, date: -1 });
+timeEntrySchema.index({ userId: 1, projectId: 1 });
+timeEntrySchema.index({ userId: 1, taskId: 1 });
+
 module.exports = mongoose.model('TimeEntry', timeEntrySchema);

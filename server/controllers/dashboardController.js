@@ -30,10 +30,10 @@ const getDashboardStats = async (req, res) => {
       Project.countDocuments({ createdBy: userId, status: 'active' }),
       Task.countDocuments({ userId, status: 'completed' }),
       Task.countDocuments({ userId, status: { $in: ['pending', 'in-progress'] } }),
-      TimeEntry.find({ userId, date: { $gte: todayStart, $lt: todayEnd } }),
-      TimeEntry.find({ userId, date: { $gte: weekStart } }),
-      TimeEntry.find({ userId, date: { $gte: monthStart } }),
-      TimeEntry.find({ userId })
+      TimeEntry.find({ userId, date: { $gte: todayStart, $lt: todayEnd } }).select('durationMinutes').lean(),
+      TimeEntry.find({ userId, date: { $gte: weekStart } }).select('durationMinutes').lean(),
+      TimeEntry.find({ userId, date: { $gte: monthStart } }).select('durationMinutes').lean(),
+      TimeEntry.find({ userId }).select('durationMinutes').lean()
     ]);
 
     const sumMin = (entries) => entries.reduce((s, e) => s + e.durationMinutes, 0);
@@ -63,7 +63,7 @@ const getDailyChart = async (req, res) => {
     startDate.setDate(startDate.getDate() - days);
     startDate.setHours(0, 0, 0, 0);
 
-    const entries = await TimeEntry.find({ userId, date: { $gte: startDate } });
+    const entries = await TimeEntry.find({ userId, date: { $gte: startDate } }).select('date durationMinutes').lean();
 
     // Group by date
     const map = {};
@@ -97,11 +97,11 @@ const getMonthlyChart = async (req, res) => {
     const start = new Date(year, 0, 1);
     const end = new Date(year + 1, 0, 1);
 
-    const entries = await TimeEntry.find({ userId, date: { $gte: start, $lt: end } });
+    const entries = await TimeEntry.find({ userId, date: { $gte: start, $lt: end } }).select('date durationMinutes').lean();
 
     const months = Array(12).fill(0);
     entries.forEach(e => {
-      months[e.date.getMonth()] += e.durationMinutes;
+      months[new Date(e.date).getMonth()] += e.durationMinutes;
     });
 
     const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -116,17 +116,24 @@ const getMonthlyChart = async (req, res) => {
 const getProjectChart = async (req, res) => {
   try {
     const userId = req.user._id;
-    const projects = await Project.find({ createdBy: userId });
+    const projects = await Project.find({ createdBy: userId }).lean();
+    if (projects.length === 0) return res.json([]);
 
-    const data = await Promise.all(
-      projects.map(async (p) => {
-        const entries = await TimeEntry.find({ userId, projectId: p._id });
-        const minutes = entries.reduce((s, e) => s + e.durationMinutes, 0);
-        return { name: p.name, minutes, color: p.color };
-      })
-    );
+    const aggregated = await TimeEntry.aggregate([
+      { $match: { userId } },
+      { $group: { _id: '$projectId', minutes: { $sum: '$durationMinutes' } } }
+    ]);
 
-    res.json(data.filter(d => d.minutes > 0));
+    const minutesMap = {};
+    aggregated.forEach(a => { if (a._id) minutesMap[a._id.toString()] = a.minutes; });
+
+    const data = projects.map(p => ({
+      name: p.name,
+      minutes: minutesMap[p._id.toString()] || 0,
+      color: p.color
+    })).filter(d => d.minutes > 0);
+
+    res.json(data);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -142,10 +149,12 @@ const getRecentActivity = async (req, res) => {
       TimeEntry.find({ userId })
         .sort({ createdAt: -1 }).limit(5)
         .populate('taskId', 'title')
-        .populate('projectId', 'name color'),
+        .populate('projectId', 'name color')
+        .lean(),
       Task.find({ userId })
         .sort({ createdAt: -1 }).limit(5)
         .populate('projectId', 'name color')
+        .lean()
     ]);
 
     res.json({ recentEntries, recentTasks });

@@ -46,16 +46,24 @@ const getTasks = async (req, res) => {
 
     const tasks = await Task.find(query)
       .populate('projectId', 'name color status')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
-    // Attach total logged time per task
-    const enriched = await Promise.all(
-      tasks.map(async (t) => {
-        const entries = await TimeEntry.find({ taskId: t._id });
-        const totalMinutes = entries.reduce((sum, e) => sum + e.durationMinutes, 0);
-        return { ...t.toObject(), totalMinutes };
-      })
-    );
+    if (tasks.length === 0) return res.json([]);
+
+    const taskIds = tasks.map(t => t._id);
+    const timeSums = await TimeEntry.aggregate([
+      { $match: { taskId: { $in: taskIds } } },
+      { $group: { _id: '$taskId', totalMinutes: { $sum: '$durationMinutes' } } }
+    ]);
+
+    const timeMap = {};
+    timeSums.forEach(ts => { timeMap[ts._id.toString()] = ts.totalMinutes; });
+
+    const enriched = tasks.map(t => ({
+      ...t,
+      totalMinutes: timeMap[t._id.toString()] || 0
+    }));
 
     res.json(enriched);
   } catch (err) {

@@ -218,12 +218,14 @@ function TaskModal({ task, projects, dateFilter, vociferEmployees = [], onClose,
   );
 }
 
+import useTaskStore from '../store/taskStore';
+import useProjectStore from '../store/projectStore';
+
 export default function Tasks() {
   const timer = useTimerStore();
-  const [tasks, setTasks] = useState([]);
-  const [projects, setProjects] = useState([]);
+  const { tasks, loading: tasksLoading, fetchTasks, addTask, updateTaskInStore, removeTaskFromStore } = useTaskStore();
+  const { projects, fetchProjects } = useProjectStore();
   const [vociferEmployees, setVociferEmployees] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [projectFilter, setProjectFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -232,30 +234,28 @@ export default function Tasks() {
   const [modal, setModal] = useState(null); // 'create' | 'edit' | 'manual'
   const [selected, setSelected] = useState(null);
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const params = {};
-      if (search) params.search = search;
-      if (projectFilter) params.projectId = projectFilter;
-      if (statusFilter) params.status = statusFilter;
-      if (priorityFilter) params.priority = priorityFilter;
-      if (dateFilter) params.date = dateFilter;
+  useEffect(() => {
+    fetchTasks({ date: dateFilter });
+    fetchProjects();
+  }, [dateFilter, fetchTasks, fetchProjects]);
 
-      const [tasksRes, projRes] = await Promise.all([
-        API.get('/tasks', { params }),
-        API.get('/projects', { params: { status: 'active' } })
-      ]);
-      setTasks(tasksRes.data);
-      setProjects(projRes.data);
-    } catch {
-      toast.error('Failed to load tasks');
-    } finally {
-      setLoading(false);
+  const filteredTasks = tasks.filter(t => {
+    const matchesSearch = !search || 
+      (t.title || '').toLowerCase().includes(search.toLowerCase()) || 
+      (t.taskNumber || '').toLowerCase().includes(search.toLowerCase());
+    
+    let matchesProject = true;
+    if (projectFilter === 'no-project') {
+      matchesProject = !t.projectId || !t.projectId._id;
+    } else if (projectFilter) {
+      matchesProject = (t.projectId?._id || t.projectId) === projectFilter;
     }
-  };
 
-  useEffect(() => { fetchData(); }, [search, projectFilter, statusFilter, priorityFilter, dateFilter]);
+    const matchesStatus = !statusFilter || t.status === statusFilter;
+    const matchesPriority = !priorityFilter || t.priority === priorityFilter;
+
+    return matchesSearch && matchesProject && matchesStatus && matchesPriority;
+  });
 
   useEffect(() => {
     API.get('/tasks/vocifer/employees')
@@ -274,19 +274,19 @@ export default function Tasks() {
   };
 
   const handleSaveNewTask = (task) => {
-    setTasks(p => [task, ...p]);
+    addTask(task);
     setModal(null);
   };
 
   const handleSaveAndStartTask = (task) => {
-    setTasks(p => [task, ...p]);
+    addTask(task);
     setModal(null);
     timer.start(task);
   };
 
   const handleSave = (task, isEdit) => {
-    if (isEdit) setTasks(p => p.map(t => t._id === task._id ? task : t));
-    else setTasks(p => [task, ...p]);
+    if (isEdit) updateTaskInStore(task);
+    else addTask(task);
     setModal(null);
   };
 
@@ -298,7 +298,7 @@ export default function Tasks() {
         payload.completedAt = new Date(dateFilter).toISOString();
       }
       const { data } = await API.put(`/tasks/${task._id}`, payload);
-      setTasks(p => p.map(t => t._id === task._id ? data : t));
+      updateTaskInStore(data);
     } catch {
       toast.error('Failed to update task');
     }
@@ -314,7 +314,7 @@ export default function Tasks() {
         } else {
           toast.success(`✅ ${formatDuration(res.entry.durationMinutes)} logged for ${taskTitle}`);
         }
-        fetchData();
+        fetchTasks({ date: dateFilter }, true);
       }
     } catch (err) {
       toast.error(err.message || 'Failed to save time entry');
@@ -398,9 +398,9 @@ export default function Tasks() {
       </div>
 
       {/* Task List */}
-      {loading ? (
+      {tasksLoading ? (
         <div className="loading-overlay"><span className="spinner spinner-lg" /></div>
-      ) : tasks.length === 0 ? (
+      ) : filteredTasks.length === 0 ? (
         <div className="empty-state">
           <div className="empty-icon">📋</div>
           <div className="empty-title">No tasks found</div>
@@ -411,7 +411,7 @@ export default function Tasks() {
         </div>
       ) : (
         <div className="task-list">
-          {tasks.map(task => {
+          {filteredTasks.map(task => {
             const isCompleted = task.status === 'completed';
             const statusColor = STATUS_CONFIG.find(c => c.id === task.status)?.color || 'var(--text-muted)';
             

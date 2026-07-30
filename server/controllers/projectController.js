@@ -11,18 +11,49 @@ const getProjects = async (req, res) => {
     if (status) query.status = status;
     if (search) query.name = { $regex: search, $options: 'i' };
 
-    const projects = await Project.find(query).sort({ createdAt: -1 });
+    const projects = await Project.find(query).sort({ createdAt: -1 }).lean();
+    if (projects.length === 0) return res.json([]);
 
-    // Attach task counts
-    const enriched = await Promise.all(
-      projects.map(async (p) => {
-        const totalTasks = await Task.countDocuments({ projectId: p._id });
-        const completedTasks = await Task.countDocuments({ projectId: p._id, status: 'completed' });
-        const timeEntries = await TimeEntry.find({ projectId: p._id });
-        const totalMinutes = timeEntries.reduce((sum, e) => sum + e.durationMinutes, 0);
-        return { ...p.toObject(), totalTasks, completedTasks, totalMinutes };
-      })
-    );
+    const projectIds = projects.map(p => p._id);
+
+    const [taskCounts, timeEntrySums] = await Promise.all([
+      Task.aggregate([
+        { $match: { projectId: { $in: projectIds } } },
+        {
+          $group: {
+            _id: '$projectId',
+            totalTasks: { $sum: 1 },
+            completedTasks: { $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] } }
+          }
+        }
+      ]),
+      TimeEntry.aggregate([
+        { $match: { projectId: { $in: projectIds } } },
+        {
+          $group: {
+            _id: '$projectId',
+            totalMinutes: { $sum: '$durationMinutes' }
+          }
+        }
+      ])
+    ]);
+
+    const taskMap = {};
+    taskCounts.forEach(t => { taskMap[t._id.toString()] = t; });
+
+    const timeMap = {};
+    timeEntrySums.forEach(t => { timeMap[t._id.toString()] = t.totalMinutes; });
+
+    const enriched = projects.map(p => {
+      const pId = p._id.toString();
+      const tStats = taskMap[pId] || { totalTasks: 0, completedTasks: 0 };
+      return {
+        ...p,
+        totalTasks: tStats.totalTasks || 0,
+        completedTasks: tStats.completedTasks || 0,
+        totalMinutes: timeMap[pId] || 0
+      };
+    });
 
     res.json(enriched);
   } catch (err) {

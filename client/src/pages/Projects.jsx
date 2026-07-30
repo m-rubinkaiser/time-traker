@@ -98,45 +98,50 @@ function ProjectModal({ project, onClose, onSave }) {
 }
 
 
+import useProjectStore from '../store/projectStore';
+
 export default function Projects() {
-  const [projects, setProjects] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { projects, loading, fetchProjects, addProject, updateProjectInStore, removeProjectFromStore } = useProjectStore();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [modal, setModal] = useState(null); // 'create' | 'edit'
   const [selected, setSelected] = useState(null);
 
-  const fetchProjects = async () => {
-    setLoading(true);
-    try {
-      const params = {};
-      if (search) params.search = search;
-      if (statusFilter) params.status = statusFilter;
-      const { data } = await API.get('/projects', { params });
-      setProjects(data);
-    } catch {
-      toast.error('Failed to load projects');
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    fetchProjects();
+  }, [fetchProjects]);
 
-  useEffect(() => { fetchProjects(); }, [search, statusFilter]);
+  const filteredProjects = projects.filter(p => {
+    const matchesSearch = !search || (p.name || '').toLowerCase().includes(search.toLowerCase()) || (p.client || '').toLowerCase().includes(search.toLowerCase());
+    const matchesStatus = !statusFilter || p.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   const handleSave = (project, isEdit) => {
     if (isEdit) {
-      setProjects(p => p.map(x => x._id === project._id ? { ...x, ...project } : x));
+      updateProjectInStore(project);
     } else {
-      setProjects(p => [{ ...project, totalTasks: 0, completedTasks: 0, totalMinutes: 0 }, ...p]);
+      addProject({ ...project, totalTasks: 0, completedTasks: 0, totalMinutes: 0 });
     }
     setModal(null);
+  };
+
+  const handleDelete = async (project) => {
+    if (!confirm(`Are you sure you want to delete project "${project.name}"?`)) return;
+    try {
+      await API.delete(`/projects/${project._id}`);
+      removeProjectFromStore(project._id);
+      toast.success('Project deleted successfully');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete project');
+    }
   };
 
   const handleArchive = async (project) => {
     const newStatus = project.status === 'archived' ? 'active' : 'archived';
     try {
       await API.put(`/projects/${project._id}`, { status: newStatus });
-      setProjects(p => p.map(x => x._id === project._id ? { ...x, status: newStatus } : x));
+      updateProjectInStore({ _id: project._id, status: newStatus });
       toast.success(`Project ${newStatus === 'archived' ? 'archived' : 'restored'}`);
     } catch {
       toast.error('Failed to update project');
@@ -148,7 +153,7 @@ export default function Projects() {
       <div className="page-header">
         <div>
           <div className="page-title">Projects</div>
-          <div className="page-subtitle">{projects.length} project{projects.length !== 1 ? 's' : ''}</div>
+          <div className="page-subtitle">{filteredProjects.length} project{filteredProjects.length !== 1 ? 's' : ''}</div>
         </div>
         <button className="btn btn-primary" onClick={() => { setSelected(null); setModal('create'); }}>
           <MdAdd /> New Project
@@ -175,7 +180,7 @@ export default function Projects() {
       {/* Project Grid */}
       {loading ? (
         <div className="loading-overlay"><span className="spinner spinner-lg" /></div>
-      ) : projects.length === 0 ? (
+      ) : filteredProjects.length === 0 ? (
         <div className="empty-state">
           <div className="empty-icon"><MdFolder /></div>
           <div className="empty-title">No projects found</div>
@@ -186,7 +191,7 @@ export default function Projects() {
         </div>
       ) : (
         <div className="project-grid">
-          {projects.map(p => (
+          {filteredProjects.map(p => (
             <div key={p._id} className="project-card" style={{ '--project-color': p.color }}>
               <div className="project-card-header">
                 <div>

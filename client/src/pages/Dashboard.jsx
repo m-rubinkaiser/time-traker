@@ -30,17 +30,20 @@ const CHART_OPTS = (isDark) => ({
   grid: { borderColor: 'rgba(255,255,255,0.06)', strokeDashArray: 4 },
 });
 
+let dashboardCache = null;
+
 export default function Dashboard() {
-  const [stats, setStats] = useState(null);
-  const [daily, setDaily] = useState([]);
-  const [monthly, setMonthly] = useState([]);
-  const [projectChart, setProjectChart] = useState([]);
-  const [recent, setRecent] = useState({ recentEntries: [], recentTasks: [] });
-  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState(dashboardCache?.stats || null);
+  const [daily, setDaily] = useState(dashboardCache?.daily || []);
+  const [monthly, setMonthly] = useState(dashboardCache?.monthly || []);
+  const [projectChart, setProjectChart] = useState(dashboardCache?.projectChart || []);
+  const [recent, setRecent] = useState(dashboardCache?.recent || { recentEntries: [], recentTasks: [] });
+  const [loading, setLoading] = useState(!dashboardCache);
   const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
 
   useEffect(() => {
     const load = async () => {
+      if (!dashboardCache) setLoading(true);
       try {
         const [s, d, m, p, r] = await Promise.all([
           API.get('/dashboard/stats'),
@@ -49,6 +52,13 @@ export default function Dashboard() {
           API.get('/dashboard/project-chart'),
           API.get('/dashboard/recent'),
         ]);
+        dashboardCache = {
+          stats: s.data,
+          daily: d.data,
+          monthly: m.data,
+          projectChart: p.data,
+          recent: r.data
+        };
         setStats(s.data);
         setDaily(d.data);
         setMonthly(m.data);

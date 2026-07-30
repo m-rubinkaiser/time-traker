@@ -5,12 +5,14 @@ import { formatTimer, formatDuration, formatDate, formatDateShort, timeToDuratio
 import toast from 'react-hot-toast';
 
 import useTimerStore from '../store/timerStore';
+import useTaskStore from '../store/taskStore';
+import useProjectStore from '../store/projectStore';
 import ManualEntryModal from '../components/ManualEntryModal';
 
 export default function TimeTracking() {
   const timer = useTimerStore();
-  const [tasks, setTasks] = useState([]);
-  const [projects, setProjects] = useState([]);
+  const { tasks, fetchTasks } = useTaskStore();
+  const { projects, fetchProjects } = useProjectStore();
   const [entries, setEntries] = useState([]);
   const [activeTask, setActiveTask] = useState('');
   const [loading, setLoading] = useState(true);
@@ -64,14 +66,11 @@ export default function TimeTracking() {
     const load = async () => {
       setLoading(true);
       try {
-        const [tasksRes, entriesRes, projRes] = await Promise.all([
-          API.get('/tasks', { params: { status: 'in-progress' } }),
+        const [entriesRes] = await Promise.all([
           API.get('/time-entries'),
-          API.get('/projects'),
+          fetchTasks(),
+          fetchProjects()
         ]);
-        const allTasks = await API.get('/tasks');
-        setTasks(allTasks.data);
-        setProjects(projRes.data || []);
         
         // Merge offline pending entries so they display in UI logs
         const pending = JSON.parse(localStorage.getItem('unsynced_time_entries') || '[]');
