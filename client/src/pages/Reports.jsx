@@ -196,16 +196,14 @@ export default function Reports({ tab: defaultTab }) {
           </select>
         </div>
 
-        {filter.type === 'custom' && (
-          <div className="filter-group" style={{ gap: 6 }}>
-            <span className="filter-label">From:</span>
-            <input className="filter-select" type="date" value={filter.startDate}
-              onChange={e => setFilter(p => ({ ...p, startDate: e.target.value }))} />
-            <span className="filter-label">To:</span>
-            <input className="filter-select" type="date" value={filter.endDate}
-              onChange={e => setFilter(p => ({ ...p, endDate: e.target.value }))} />
-          </div>
-        )}
+        <div className="filter-group" style={{ gap: 6 }}>
+          <span className="filter-label">From:</span>
+          <input className="filter-select" type="date" value={filter.startDate}
+            onChange={e => setFilter(p => ({ ...p, type: 'custom', startDate: e.target.value }))} />
+          <span className="filter-label">To:</span>
+          <input className="filter-select" type="date" value={filter.endDate}
+            onChange={e => setFilter(p => ({ ...p, type: 'custom', endDate: e.target.value }))} />
+        </div>
 
         <div className="filter-group">
           <span className="filter-label">Project:</span>

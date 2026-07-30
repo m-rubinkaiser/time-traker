@@ -87,8 +87,9 @@ const getMe = async (req, res) => {
       expiryDate: { $gte: new Date() }
     });
 
+    const userObj = typeof req.user.toJSON === 'function' ? req.user.toJSON() : { ...req.user };
     res.json({
-      ...req.user.toJSON(),
+      ...userObj,
       subscription: activeSub ? {
         planName: activeSub.planName,
         expiryDate: activeSub.expiryDate,
