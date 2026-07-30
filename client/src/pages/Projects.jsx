@@ -232,6 +232,9 @@ export default function Projects() {
                 <button className="btn btn-ghost btn-sm" onClick={() => handleArchive(p)}>
                   <MdArchive /> {p.status === 'archived' ? 'Restore' : 'Archive'}
                 </button>
+                <button className="btn btn-ghost btn-sm" style={{ color: 'var(--danger)' }} onClick={() => handleDelete(p)}>
+                  <MdDelete /> Delete
+                </button>
               </div>
 
               <div className="text-xs text-muted" style={{ marginTop: 4 }}>Created {formatDate(p.createdAt)}</div>

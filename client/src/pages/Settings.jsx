@@ -381,22 +381,26 @@ function DataManagementTab() {
   }, []);
 
   const deleteProject = async (id) => {
-    if (!confirm('Delete this project? This will also delete all its tasks and time entries!')) return;
+    if (!confirm('Are you sure you want to delete this project?')) return;
     try {
       await API.delete(`/projects/${id}`);
       setProjects(p => p.filter(x => x._id !== id));
       setTasks(t => t.filter(x => x.projectId?._id !== id && x.projectId !== id));
-      toast.success('Project deleted');
-    } catch { toast.error('Failed to delete project'); }
+      toast.success('Project deleted successfully');
+    } catch (err) { 
+      toast.error(err.response?.data?.message || 'Failed to delete project'); 
+    }
   };
 
   const deleteTask = async (id) => {
-    if (!confirm('Delete this task?')) return;
+    if (!confirm('Are you sure you want to delete this task?')) return;
     try {
       await API.delete(`/tasks/${id}`);
       setTasks(p => p.filter(x => x._id !== id));
-      toast.success('Task deleted');
-    } catch { toast.error('Failed to delete task'); }
+      toast.success('Task deleted successfully');
+    } catch (err) { 
+      toast.error(err.response?.data?.message || 'Failed to delete task'); 
+    }
   };
 
   const filteredProjects = projects.filter(p => {

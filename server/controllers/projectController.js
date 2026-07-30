@@ -79,10 +79,19 @@ const updateProject = async (req, res) => {
 // @route DELETE /api/projects/:id
 const deleteProject = async (req, res) => {
   try {
-    const project = await Project.findOneAndDelete({ _id: req.params.id, createdBy: req.user._id });
+    const project = await Project.findOne({ _id: req.params.id, createdBy: req.user._id });
     if (!project) return res.status(404).json({ message: 'Project not found' });
 
-    // Cascade delete tasks and time entries
+    const taskCount = await Task.countDocuments({ projectId: req.params.id });
+    if (taskCount > 0 && req.query.force !== 'true') {
+      return res.status(400).json({
+        message: `Cannot delete project "${project.name}" because it is currently assigned to ${taskCount} task(s). Please delete or reassign its tasks first.`
+      });
+    }
+
+    await Project.deleteOne({ _id: req.params.id });
+
+    // Cascade delete tasks and time entries if forced
     const tasks = await Task.find({ projectId: req.params.id });
     const taskIds = tasks.map(t => t._id);
     await TimeEntry.deleteMany({ taskId: { $in: taskIds } });

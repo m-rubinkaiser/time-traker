@@ -164,10 +164,19 @@ const updateTask = async (req, res) => {
 // @route DELETE /api/tasks/:id
 const deleteTask = async (req, res) => {
   try {
-    const task = await Task.findOneAndDelete({ _id: req.params.id, userId: req.user._id });
+    const task = await Task.findOne({ _id: req.params.id, userId: req.user._id });
     if (!task) return res.status(404).json({ message: 'Task not found' });
+
+    const entryCount = await TimeEntry.countDocuments({ taskId: req.params.id });
+    if (entryCount > 0 && req.query.force !== 'true') {
+      return res.status(400).json({
+        message: `Cannot delete task "${task.title}" because it has ${entryCount} logged time entry(ies). Please delete the time entries first.`
+      });
+    }
+
+    await Task.deleteOne({ _id: req.params.id });
     await TimeEntry.deleteMany({ taskId: req.params.id });
-    res.json({ message: 'Task deleted' });
+    res.json({ message: 'Task deleted successfully' });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

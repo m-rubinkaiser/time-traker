@@ -77,7 +77,7 @@ function NewTaskModal({ dateFilter, onClose, onSave, onSaveAndStart }) {
   );
 }
 
-function TaskModal({ task, projects, dateFilter, vociferEmployees = [], onClose, onSave }) {
+function TaskModal({ task, projects, dateFilter, vociferEmployees = [], onClose, onSave, onDelete }) {
   const [form, setForm] = useState({
     projectId: task?.projectId?._id || task?.projectId || '',
     title: task?.title || '',
@@ -88,6 +88,20 @@ function TaskModal({ task, projects, dateFilter, vociferEmployees = [], onClose,
     testerId: ''
   });
   const [saving, setSaving] = useState(false);
+
+  const handleDeleteTask = async () => {
+    if (!confirm(`Are you sure you want to delete task "${task.title}"?`)) return;
+    setSaving(true);
+    try {
+      await API.delete(`/tasks/${task._id}`);
+      toast.success('Task deleted successfully');
+      onDelete(task._id);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete task');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -184,12 +198,19 @@ function TaskModal({ task, projects, dateFilter, vociferEmployees = [], onClose,
               </div>
             )}
           </div>
-          <div className="modal-footer">
-            <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn btn-primary" disabled={saving}>
-              {saving ? <span className="spinner" /> : null}
-              {task ? 'Update Task' : 'Add Task'}
-            </button>
+          <div className="modal-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            {task ? (
+              <button type="button" className="btn btn-danger btn-sm" onClick={handleDeleteTask} disabled={saving}>
+                Delete Task
+              </button>
+            ) : <div />}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
+              <button type="submit" className="btn btn-primary" disabled={saving}>
+                {saving ? <span className="spinner" /> : null}
+                {task ? 'Update Task' : 'Add Task'}
+              </button>
+            </div>
           </div>
         </form>
       </div>
@@ -472,6 +493,7 @@ export default function Tasks() {
           vociferEmployees={vociferEmployees}
           onClose={() => setModal(null)}
           onSave={handleSave}
+          onDelete={(id) => { setTasks(p => p.filter(t => t._id !== id)); setModal(null); }}
         />
       )}
       {modal === 'manual' && selected && (
