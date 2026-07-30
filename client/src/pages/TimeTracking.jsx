@@ -170,7 +170,7 @@ export default function TimeTracking() {
 
           {currentTask && (
             <div className="timer-task-name">
-              <span className="color-dot" style={{ background: currentTask.projectId?.color, display: 'inline-block', marginRight: 6 }} />
+              <span className="color-dot" style={{ background: currentTask.projectId?.color || 'var(--text-muted)', display: 'inline-block', marginRight: 6 }} />
               {currentTask.title}
             </div>
           )}
@@ -187,7 +187,7 @@ export default function TimeTracking() {
               <option value="">— Select a task —</option>
               {tasks.map(t => (
                 <option key={t._id} value={t._id}>
-                  [{t.projectId?.name}] {t.title}
+                  {t.projectId?.name ? `[${t.projectId.name}] ` : ''}{t.title}
                 </option>
               ))}
             </select>
@@ -264,8 +264,8 @@ export default function TimeTracking() {
                         <td style={{ fontWeight: 500 }}>{e.taskId?.title || '—'}</td>
                         <td>
                           <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span className="color-dot" style={{ background: e.projectId?.color }} />
-                            {e.projectId?.name || '—'}
+                            <span className="color-dot" style={{ background: e.projectId?.color || 'var(--text-muted)' }} />
+                            {e.projectId?.name || 'No Project'}
                           </span>
                         </td>
                         <td className="td-muted">{e.startTime || '—'}</td>

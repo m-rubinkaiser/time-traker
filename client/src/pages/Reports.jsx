@@ -183,8 +183,8 @@ export default function Reports({ tab: defaultTab }) {
                       <td className="td-muted">{formatDateShort(e.date)}</td>
                       <td>
                         <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span className="color-dot" style={{ background: e.projectId?.color }} />
-                          {e.projectId?.name || '—'}
+                          <span className="color-dot" style={{ background: e.projectId?.color || 'var(--text-muted)' }} />
+                          {e.projectId?.name || 'No Project'}
                         </span>
                       </td>
                       <td style={{ fontWeight: 500 }}>{e.taskId?.title || '—'}</td>

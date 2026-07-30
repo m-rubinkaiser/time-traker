@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const timeEntrySchema = new mongoose.Schema({
   taskId: { type: mongoose.Schema.Types.ObjectId, ref: 'Task', required: true },
-  projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true },
+  projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: false, default: null },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   date: { type: Date, required: true },
   startTime: { type: String, default: null },   // "HH:mm" format

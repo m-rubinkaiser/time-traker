@@ -280,8 +280,8 @@ export default function Dashboard() {
                 <div className="activity-text">
                   <div className="activity-title">{t.title}</div>
                   <div className="activity-sub">
-                    <span className="color-dot" style={{ background: t.projectId?.color, marginRight: 4 }} />
-                    {t.projectId?.name}
+                    <span className="color-dot" style={{ background: t.projectId?.color || 'var(--text-muted)', marginRight: 4 }} />
+                    {t.projectId?.name || 'No Project'}
                     {t.dueDate && <span> · Due: {formatDate(t.dueDate)}</span>}
                   </div>
                 </div>

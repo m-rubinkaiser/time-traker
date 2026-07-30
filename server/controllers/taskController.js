@@ -3,6 +3,19 @@ const TimeEntry = require('../models/TimeEntry');
 const Settings = require('../models/Settings');
 const VociferService = require('../services/vociferService');
 
+const generateNextTaskNumber = async (userId) => {
+  const count = await Task.countDocuments({ userId });
+  let nextNum = count + 1;
+  let taskNum = `TASK-${1000 + nextNum}`;
+  let exists = await Task.findOne({ userId, taskNumber: taskNum });
+  while (exists) {
+    nextNum++;
+    taskNum = `TASK-${1000 + nextNum}`;
+    exists = await Task.findOne({ userId, taskNumber: taskNum });
+  }
+  return taskNum;
+};
+
 // @desc Get all tasks
 // @route GET /api/tasks
 const getTasks = async (req, res) => {
@@ -61,12 +74,18 @@ const getTask = async (req, res) => {
 const createTask = async (req, res) => {
   try {
     const { projectId, title, description, priority, status, createdAt, developer, tester } = req.body;
-    if (!projectId || !title) {
-      return res.status(400).json({ message: 'Project and task title are required' });
-    }
+    
+    const taskNumber = await generateNextTaskNumber(req.user._id);
+    const finalTitle = title && title.trim() ? title.trim() : taskNumber;
+
     const task = await Task.create({
-      projectId, userId: req.user._id, title, description,
-      priority: priority || 'medium', status: status || 'pending',
+      taskNumber,
+      projectId: projectId || null,
+      userId: req.user._id,
+      title: finalTitle,
+      description: description || '',
+      priority: priority || 'medium',
+      status: status || 'pending',
       createdAt: createdAt ? new Date(createdAt) : Date.now()
     });
 
@@ -76,7 +95,7 @@ const createTask = async (req, res) => {
       if (settings?.vociferCredentials?.email && settings?.vociferCredentials?.password) {
         const vocifer = new VociferService(settings.vociferCredentials.email, settings.vociferCredentials.password);
         if (await vocifer.initSession()) {
-          const devTask = await vocifer.createDevTask(title, description, priority || 'medium', developer, tester);
+          const devTask = await vocifer.createDevTask(finalTitle, description, priority || 'medium', developer, tester);
           if (devTask && devTask.tkid) {
             task.vociferTaskId = devTask.tkid;
             await task.save();
@@ -102,6 +121,9 @@ const updateTask = async (req, res) => {
       req.body.completedAt = new Date();
     } else if (['pending', 'in-progress'].includes(req.body.status)) {
       req.body.completedAt = null; // Reset if moved back from completed/cancelled
+    }
+    if (req.body.projectId === '') {
+      req.body.projectId = null;
     }
     req.body.updatedAt = new Date();
     const task = await Task.findOneAndUpdate(

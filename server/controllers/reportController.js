@@ -197,7 +197,7 @@ const exportReport = async (req, res) => {
     entries.forEach(e => {
       sheet.addRow({
         date: e.date.toLocaleDateString('en-IN'),
-        project: e.projectId?.name || '-',
+        project: e.projectId?.name || 'No Project',
         task: e.taskId?.title || '-',
         startTime: e.startTime || '-',
         endTime: e.endTime || '-',

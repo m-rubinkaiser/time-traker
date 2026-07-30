@@ -69,7 +69,7 @@ export default function ManualEntryModal({ tasks, onClose, onSave, editEntry, de
                 <option value="">Select task...</option>
                 {tasks.map(t => (
                   <option key={t._id} value={t._id}>
-                    [{t.projectId?.name || 'Task'}] {t.title}
+                    {t.projectId?.name ? `[${t.projectId.name}] ` : ''}{t.title}
                   </option>
                 ))}
               </select>

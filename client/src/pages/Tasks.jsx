@@ -17,7 +17,7 @@ const STATUS_OPTIONS = STATUS_CONFIG.map(s => s.id);
 
 function TaskModal({ task, projects, dateFilter, vociferEmployees = [], onClose, onSave }) {
   const [form, setForm] = useState({
-    projectId: task?.projectId?._id || task?.projectId || (projects[0]?._id || ''),
+    projectId: task?.projectId?._id || task?.projectId || '',
     title: task?.title || '',
     description: task?.description || '',
     priority: task?.priority || 'medium',
@@ -30,7 +30,6 @@ function TaskModal({ task, projects, dateFilter, vociferEmployees = [], onClose,
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.title.trim()) return toast.error('Task title is required');
-    if (!form.projectId) return toast.error('Please select a project');
     setSaving(true);
     try {
       const payload = { ...form };
@@ -69,10 +68,10 @@ function TaskModal({ task, projects, dateFilter, vociferEmployees = [], onClose,
         <form onSubmit={handleSubmit}>
           <div className="modal-body">
             <div className="form-group">
-              <label className="form-label">Project *</label>
+              <label className="form-label">Project (Optional)</label>
               <select className="form-control" value={form.projectId}
                 onChange={e => setForm(p => ({ ...p, projectId: e.target.value }))}>
-                <option value="">Select project...</option>
+                <option value="">No Project</option>
                 {projects.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
               </select>
             </div>
@@ -191,6 +190,20 @@ export default function Tasks() {
     setDateFilter(d.toISOString().split('T')[0]);
   };
 
+  const handleCreateTask = async () => {
+    try {
+      const payload = {};
+      if (dateFilter) {
+        payload.createdAt = new Date(dateFilter).toISOString();
+      }
+      const { data } = await API.post('/tasks', payload);
+      setTasks(prev => [data, ...prev]);
+      toast.success(`Task ${data.taskNumber || data.title} created!`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to create task');
+    }
+  };
+
   const handleSave = (task, isEdit) => {
     if (isEdit) setTasks(p => p.map(t => t._id === task._id ? task : t));
     else setTasks(p => [task, ...p]);
@@ -226,7 +239,9 @@ export default function Tasks() {
     } catch (err) {
       toast.error(err.message || 'Failed to save time entry');
     }
-  };  const getStatusCount = (s) => tasks.filter(t => t.status === s).length;
+  };
+
+  const getStatusCount = (s) => tasks.filter(t => t.status === s).length;
 
   return (
     <div className="animate-in">
@@ -234,8 +249,8 @@ export default function Tasks() {
         <div>
           <div className="page-title">Tasks</div>
         </div>
-        <button className="btn btn-primary" onClick={() => { setSelected(null); setModal('task'); }}>
-          <MdAdd /> Add Task
+        <button className="btn btn-primary" onClick={handleCreateTask}>
+          <MdAdd /> New
         </button>
       </div>
 
@@ -308,9 +323,9 @@ export default function Tasks() {
         <div className="empty-state">
           <div className="empty-icon">📋</div>
           <div className="empty-title">No tasks found</div>
-          <div className="empty-desc">Create your first task to get started</div>
-          <button className="btn btn-primary" onClick={() => { setSelected(null); setModal('task'); }}>
-            <MdAdd /> Add Task
+          <div className="empty-desc">Click New to automatically create your first task</div>
+          <button className="btn btn-primary" onClick={handleCreateTask}>
+            <MdAdd /> New
           </button>
         </div>
       ) : (
@@ -331,11 +346,18 @@ export default function Tasks() {
                 </div>
 
                 <div className="task-content">
-                  <div className="task-title">{task.title}</div>
+                  <div className="task-title">
+                    {task.taskNumber && task.title !== task.taskNumber && (
+                      <span className="badge" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-secondary)', marginRight: 8, fontSize: 11, fontWeight: 600 }}>
+                        {task.taskNumber}
+                      </span>
+                    )}
+                    {task.title}
+                  </div>
                   <div className="task-meta">
                     <span className="task-project">
-                      <span className="task-dot" style={{ background: task.projectId?.color }} />
-                      {task.projectId?.name}
+                      <span className="task-dot" style={{ background: task.projectId?.color || 'var(--text-muted)' }} />
+                      {task.projectId?.name || 'No Project'}
                     </span>
                     <span className={`badge badge-${task.priority}`}>{task.priority}</span>
                     <span className="badge" style={{ background: statusColor, color: 'white', borderColor: statusColor }}>
