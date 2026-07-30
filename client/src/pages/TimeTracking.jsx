@@ -10,11 +10,15 @@ import ManualEntryModal from '../components/ManualEntryModal';
 export default function TimeTracking() {
   const timer = useTimerStore();
   const [tasks, setTasks] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [entries, setEntries] = useState([]);
   const [activeTask, setActiveTask] = useState('');
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null);
   const [editEntry, setEditEntry] = useState(null);
+  const [search, setSearch] = useState('');
+  const [projectFilter, setProjectFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
   const timerStartRef = useRef(null);
 
   const syncOfflineEntries = async () => {
@@ -60,12 +64,14 @@ export default function TimeTracking() {
     const load = async () => {
       setLoading(true);
       try {
-        const [tasksRes, entriesRes] = await Promise.all([
+        const [tasksRes, entriesRes, projRes] = await Promise.all([
           API.get('/tasks', { params: { status: 'in-progress' } }),
           API.get('/time-entries'),
+          API.get('/projects'),
         ]);
         const allTasks = await API.get('/tasks');
         setTasks(allTasks.data);
+        setProjects(projRes.data || []);
         
         // Merge offline pending entries so they display in UI logs
         const pending = JSON.parse(localStorage.getItem('unsynced_time_entries') || '[]');
@@ -87,6 +93,24 @@ export default function TimeTracking() {
       window.removeEventListener('online', syncOfflineEntries);
     };
   }, []);
+
+  const filteredEntries = entries.filter(e => {
+    const matchesSearch = !search || 
+      (e.taskId?.title || '').toLowerCase().includes(search.toLowerCase()) || 
+      (e.projectId?.name || '').toLowerCase().includes(search.toLowerCase()) || 
+      (e.remarks || '').toLowerCase().includes(search.toLowerCase());
+    
+    let matchesProject = true;
+    if (projectFilter === 'no-project') {
+      matchesProject = !e.projectId || !e.projectId._id;
+    } else if (projectFilter) {
+      matchesProject = (e.projectId?._id || e.projectId) === projectFilter;
+    }
+
+    const matchesType = !typeFilter || e.entryType === typeFilter;
+
+    return matchesSearch && matchesProject && matchesType;
+  });
 
   useEffect(() => {
     if (timer.activeTaskId && !activeTask) {
@@ -230,16 +254,36 @@ export default function TimeTracking() {
           <div className="card">
             <div className="card-header">
               <div className="card-title"><MdTimer /> Time Log</div>
-              <span className="tag">{entries.length} entries</span>
+              <span className="tag">{filteredEntries.length} entries</span>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', padding: '12px 16px', background: 'var(--bg-elevated)', borderBottom: '1px solid var(--border)' }}>
+              <input
+                className="filter-select"
+                placeholder="Search logs..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                style={{ minWidth: 150, flex: 1 }}
+              />
+              <select className="filter-select" value={projectFilter} onChange={e => setProjectFilter(e.target.value)}>
+                <option value="">All Projects</option>
+                <option value="no-project">No Project (Unassigned)</option>
+                {projects.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
+              </select>
+              <select className="filter-select" value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
+                <option value="">All Types</option>
+                <option value="auto">Auto (Timer)</option>
+                <option value="manual">Manual</option>
+              </select>
             </div>
 
             {loading ? (
               <div className="loading-overlay" style={{ padding: 40 }}><span className="spinner" /></div>
-            ) : entries.length === 0 ? (
+            ) : filteredEntries.length === 0 ? (
               <div className="empty-state" style={{ padding: 40 }}>
                 <div className="empty-icon">⏱</div>
-                <div className="empty-title">No time entries yet</div>
-                <div className="empty-desc">Start a timer or add a manual entry</div>
+                <div className="empty-title">No matching time entries</div>
+                <div className="empty-desc">Try clearing filters or start tracking time</div>
               </div>
             ) : (
               <div className="table-wrapper">
@@ -258,7 +302,7 @@ export default function TimeTracking() {
                     </tr>
                   </thead>
                   <tbody>
-                    {entries.map(e => (
+                    {filteredEntries.map(e => (
                       <tr key={e._id}>
                         <td className="td-muted">{formatDateShort(e.date)}</td>
                         <td style={{ fontWeight: 500 }}>{e.taskId?.title || '—'}</td>

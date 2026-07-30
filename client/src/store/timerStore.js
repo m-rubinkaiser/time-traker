@@ -170,13 +170,7 @@ const useTimerStore = create((set, get) => {
       if (intervalId) clearInterval(intervalId);
 
       const totalSeconds = accumulated + (status === 'running' ? Math.floor((Date.now() - startTs) / 1000) : 0);
-      if (totalSeconds < 60) {
-        // Reset the timer since it ran for less than 1 minute
-        get().reset();
-        throw new Error('Timer must run for at least 1 minute');
-      }
-
-      const minutes = Math.round(totalSeconds / 60);
+      const minutes = Math.max(1, Math.round(totalSeconds / 60));
       const startTime = new Date(startTs || Date.now()).toTimeString().slice(0, 5);
       const endTime = new Date().toTimeString().slice(0, 5);
       const date = new Date().toISOString().split('T')[0];
