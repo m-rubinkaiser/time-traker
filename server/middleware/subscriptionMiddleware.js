@@ -1,5 +1,7 @@
 const Subscription = require('../models/Subscription');
 
+const subCache = new Map();
+
 const checkSubscription = async (req, res, next) => {
   // Allow admins to bypass subscription checks
   if (req.user && req.user.role === 'admin') {
@@ -18,13 +20,26 @@ const checkSubscription = async (req, res, next) => {
   }
 
   try {
-    const activeSub = await Subscription.findOne({
-      userId: req.user._id,
-      status: 'active',
-      expiryDate: { $gte: new Date() }
-    });
+    const userIdStr = req.user._id.toString();
+    const now = Date.now();
+    const cached = subCache.get(userIdStr);
 
-    if (!activeSub) {
+    let isSubscribed = false;
+
+    if (cached && (now - cached.timestamp < 60000)) {
+      isSubscribed = cached.active;
+    } else {
+      const activeSub = await Subscription.findOne({
+        userId: req.user._id,
+        status: 'active',
+        expiryDate: { $gte: new Date() }
+      }).lean();
+
+      isSubscribed = !!activeSub;
+      subCache.set(userIdStr, { active: isSubscribed, timestamp: now });
+    }
+
+    if (!isSubscribed) {
       // If there's no active subscription, allow GET requests to succeed but return empty lists/zeros
       if (req.method === 'GET') {
         const url = req.originalUrl;

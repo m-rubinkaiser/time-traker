@@ -11,7 +11,7 @@ const protect = async (req, res, next) => {
       const systemSettings = await getSystemSettings();
       
       const decoded = jwt.verify(token, systemSettings.jwtSecret);
-      req.user = await User.findById(decoded.id).select('-password');
+      req.user = await User.findById(decoded.id).select('-password').lean();
       
       if (!req.user) {
         return res.status(401).json({ message: 'User not found' });

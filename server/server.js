@@ -24,6 +24,16 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Ensure database connection before processing any API requests
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    res.status(500).json({ message: 'Database connection error: ' + err.message });
+  }
+});
+
 // Routes
 // Routes
 const { protect } = require('./middleware/auth');
